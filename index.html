@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workout App</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Main Content Area -->
+        <main id="main-content">
+            <!-- Active Workout Tab Content -->
+            <div id="tab-workout" class="tab-content active">
+                <h1>Active Workout</h1>
+                <div id="workout-content">
+                    <p class="empty-state">No active workout. Go to Programs to start a workout.</p>
+                </div>
+            </div>
+
+            <!-- Programs Tab Content -->
+            <div id="tab-programs" class="tab-content">
+                <h1>Programs</h1>
+                <div id="programs-content">
+                    <p class="empty-state">No programs yet. Create your first program!</p>
+                    <button id="create-program-btn" class="btn-primary">Create Program</button>
+                </div>
+            </div>
+
+            <!-- Exercises Tab Content -->
+            <div id="tab-exercises" class="tab-content">
+                <h1>Exercises</h1>
+                <div id="exercises-content">
+                    <!-- Exercises will be rendered here by ui.js -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav id="bottom-nav">
+            <button class="nav-btn active" data-tab="workout">
+                <span class="nav-icon">💪</span>
+                <span class="nav-label">Workout</span>
+            </button>
+            <button class="nav-btn" data-tab="programs">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Programs</span>
+            </button>
+            <button class="nav-btn" data-tab="exercises">
+                <span class="nav-icon">🏋️</span>
+                <span class="nav-label">Exercises</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Load Dexie.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
+
+    <!-- Load our JavaScript modules -->
+    <script src="js/exercises-data.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
