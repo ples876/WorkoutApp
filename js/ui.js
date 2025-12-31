@@ -156,13 +156,22 @@ async function renderExercises() {
     `;
 
     exercises.forEach(exercise => {
+      const notes = exercise.notes || '';
       html += `
-        <div class="exercise-item">
-          <span class="exercise-name">${exercise.name}</span>
-          <div class="exercise-item-actions">
-            ${exercise.isCustom ? '<span class="custom-badge">Custom</span>' : ''}
-            ${exercise.isCustom ? `<button class="btn-delete-exercise" data-exercise-id="${exercise.id}">Delete</button>` : ''}
-            <button class="btn-view-history" data-exercise-id="${exercise.id}">View History</button>
+        <div class="exercise-item-wrapper">
+          <textarea
+            class="exercise-notes"
+            data-exercise-id="${exercise.id}"
+            placeholder="Add notes (e.g., form cues, PRs, preferences)..."
+            rows="2"
+          >${notes}</textarea>
+          <div class="exercise-item">
+            <span class="exercise-name">${exercise.name}</span>
+            <div class="exercise-item-actions">
+              ${exercise.isCustom ? '<span class="custom-badge">Custom</span>' : ''}
+              ${exercise.isCustom ? `<button class="btn-delete-exercise" data-exercise-id="${exercise.id}">Delete</button>` : ''}
+              <button class="btn-view-history" data-exercise-id="${exercise.id}">View History</button>
+            </div>
           </div>
         </div>
       `;
@@ -378,12 +387,20 @@ function renderWorkoutExercises(exercises) {
   exercises.forEach((ex, index) => {
     const exercise = state.exercises.find(e => e.id === ex.exerciseId);
     const exerciseName = exercise ? exercise.name : 'Unknown';
+    const isFirst = index === 0;
+    const isLast = index === exercises.length - 1;
 
     html += `
       <div class="exercise-entry" data-index="${index}">
-        <span class="exercise-name">${exerciseName}</span>
-        <span class="exercise-sets">${ex.targetSets} sets</span>
-        <button class="btn-remove-exercise" data-index="${index}">Remove</button>
+        <div class="exercise-entry-info">
+          <span class="exercise-name">${exerciseName}</span>
+          <span class="exercise-sets">${ex.targetSets} sets</span>
+        </div>
+        <div class="exercise-entry-actions">
+          <button class="btn-move-exercise" data-index="${index}" data-direction="up" ${isFirst ? 'disabled' : ''}>↑</button>
+          <button class="btn-move-exercise" data-index="${index}" data-direction="down" ${isLast ? 'disabled' : ''}>↓</button>
+          <button class="btn-remove-exercise" data-index="${index}">Remove</button>
+        </div>
       </div>
     `;
   });
@@ -584,8 +601,16 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
     // Get last time data for this exercise
     const lastTimeSets = lastWorkout ? lastWorkout.sets.filter(s => s.exerciseId === ex.exerciseId) : [];
 
+    const exerciseNotes = exercise ? (exercise.notes || '') : '';
+
     html += `
       <div class="exercise-logging" data-exercise-id="${ex.exerciseId}">
+        <textarea
+          class="exercise-notes workout-notes"
+          data-exercise-id="${ex.exerciseId}"
+          placeholder="Add notes (e.g., form cues, PRs, preferences)..."
+          rows="2"
+        >${exerciseNotes}</textarea>
         <div class="exercise-header">
           <h3>${exerciseName}</h3>
           <button class="btn-view-history-workout" data-exercise-id="${ex.exerciseId}">History</button>
@@ -726,13 +751,18 @@ function setupProgramFormListeners(programId) {
     });
   });
 
-  // Remove exercise buttons (use event delegation)
+  // Remove exercise buttons and move exercise buttons (use event delegation)
   document.querySelectorAll('.workout-exercises').forEach(container => {
     container.addEventListener('click', (e) => {
       if (e.target.classList.contains('btn-remove-exercise')) {
         const workoutNumber = parseInt(container.dataset.workout);
         const index = parseInt(e.target.dataset.index);
         handleRemoveExerciseFromWorkout(workoutNumber, index);
+      } else if (e.target.classList.contains('btn-move-exercise')) {
+        const workoutNumber = parseInt(container.dataset.workout);
+        const index = parseInt(e.target.dataset.index);
+        const direction = e.target.dataset.direction;
+        handleMoveExercise(workoutNumber, index, direction);
       }
     });
   });
@@ -786,6 +816,26 @@ function setupWorkoutPreviewListeners() {
 }
 
 function setupWorkoutLoggingListeners(sessionId) {
+  // Exercise notes textareas in workout
+  document.querySelectorAll('.workout-notes').forEach(textarea => {
+    // Save on blur (when user clicks away)
+    textarea.addEventListener('blur', async () => {
+      const exerciseId = parseInt(textarea.dataset.exerciseId);
+      const notes = textarea.value;
+      await handleUpdateExerciseNotes(exerciseId, notes);
+    });
+
+    // Auto-resize textarea based on content
+    textarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+    });
+
+    // Initial resize
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  });
+
   // Log Set buttons
   document.querySelectorAll('.btn-log-set').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -842,6 +892,26 @@ function setupExerciseListeners() {
       showCustomExerciseForm();
     });
   }
+
+  // Exercise notes textareas
+  document.querySelectorAll('.exercise-notes').forEach(textarea => {
+    // Save on blur (when user clicks away)
+    textarea.addEventListener('blur', async () => {
+      const exerciseId = parseInt(textarea.dataset.exerciseId);
+      const notes = textarea.value;
+      await handleUpdateExerciseNotes(exerciseId, notes);
+    });
+
+    // Auto-resize textarea based on content
+    textarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+    });
+
+    // Initial resize
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  });
 
   // View History buttons (from exercises tab)
   document.querySelectorAll('.btn-view-history').forEach(btn => {
@@ -1019,6 +1089,16 @@ async function handleCreateCustomExercise(event) {
   } catch (error) {
     console.error('Failed to create custom exercise:', error);
     alert('Failed to create exercise. Please try again.');
+  }
+}
+
+async function handleUpdateExerciseNotes(exerciseId, notes) {
+  try {
+    await updateExerciseNotes(exerciseId, notes);
+    await loadExercises(); // Reload to update state
+  } catch (error) {
+    console.error('Failed to update notes:', error);
+    alert('Failed to save notes. Please try again.');
   }
 }
 
@@ -1296,6 +1376,23 @@ function handleRemoveExerciseFromWorkout(workoutNumber, index) {
   if (!workoutData[workoutNumber]) return;
 
   workoutData[workoutNumber].splice(index, 1);
+
+  // Re-render
+  const container = document.querySelector(`.workout-exercises[data-workout="${workoutNumber}"]`);
+  container.innerHTML = renderWorkoutExercises(workoutData[workoutNumber]);
+}
+
+function handleMoveExercise(workoutNumber, index, direction) {
+  if (!workoutData[workoutNumber]) return;
+
+  const exercises = workoutData[workoutNumber];
+  const newIndex = direction === 'up' ? index - 1 : index + 1;
+
+  // Validate bounds
+  if (newIndex < 0 || newIndex >= exercises.length) return;
+
+  // Swap exercises
+  [exercises[index], exercises[newIndex]] = [exercises[newIndex], exercises[index]];
 
   // Re-render
   const container = document.querySelector(`.workout-exercises[data-workout="${workoutNumber}"]`);

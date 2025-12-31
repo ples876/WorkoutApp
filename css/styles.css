@@ -138,7 +138,36 @@ h3 {
 .exercise-list {
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.exercise-item-wrapper {
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-xs);
+}
+
+.exercise-notes {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 2.5rem;
+  background-color: var(--surface);
+  color: var(--text-primary);
+}
+
+.exercise-notes:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background-color: white;
+}
+
+.exercise-notes::placeholder {
+  color: var(--text-secondary);
 }
 
 .exercise-item {
@@ -422,6 +451,18 @@ h3 {
   margin-bottom: var(--spacing-xs);
 }
 
+.exercise-entry-info {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.exercise-entry-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
 .exercise-name {
   font-weight: 500;
 }
@@ -429,6 +470,27 @@ h3 {
 .exercise-sets {
   color: var(--text-secondary);
   font-size: 0.875rem;
+}
+
+.btn-move-exercise {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  border-radius: 0.25rem;
+  min-width: 2rem;
+  font-weight: bold;
+}
+
+.btn-move-exercise:hover:not(:disabled) {
+  background-color: var(--border);
+}
+
+.btn-move-exercise:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .btn-remove-exercise {

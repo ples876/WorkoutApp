@@ -11,6 +11,19 @@ db.version(1).stores({
   sets: '++id, workoutSessionId, exerciseId, weight, reps, timestamp'
 });
 
+// Version 2: Add notes field to exercises
+db.version(2).stores({
+  exercises: '++id, name, muscleGroup, isCustom',
+  programs: '++id, name, isActive',
+  workoutSessions: '++id, programId, workoutNumber, date, isComplete',
+  sets: '++id, workoutSessionId, exerciseId, weight, reps, timestamp'
+}).upgrade(tx => {
+  // Add notes field to existing exercises (default to empty string)
+  return tx.table('exercises').toCollection().modify(exercise => {
+    exercise.notes = exercise.notes || '';
+  });
+});
+
 // Database initialization
 async function initDatabase() {
   try {
@@ -59,8 +72,13 @@ async function addCustomExercise(name, muscleGroup) {
   return await db.exercises.add({
     name,
     muscleGroup,
-    isCustom: true
+    isCustom: true,
+    notes: ''
   });
+}
+
+async function updateExerciseNotes(exerciseId, notes) {
+  return await db.exercises.update(exerciseId, { notes });
 }
 
 async function deleteExercise(id) {
