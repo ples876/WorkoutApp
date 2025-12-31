@@ -238,7 +238,7 @@ h3 {
 /* Active workout */
 .active-workout {
   background-color: var(--surface);
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm);
   border-radius: 0.5rem;
   border: 1px solid var(--border);
 }
@@ -603,7 +603,7 @@ h3 {
 /* Workout logging */
 .exercise-logging {
   background-color: var(--surface);
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm);
   border-radius: 0.5rem;
   border: 1px solid var(--border);
   margin-bottom: var(--spacing-md);
@@ -653,13 +653,13 @@ h3 {
   display: flex;
   gap: var(--spacing-xs);
   margin-bottom: var(--spacing-sm);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: stretch;
 }
 
 .weight-input,
 .reps-input {
-  flex: 1;
-  min-width: 80px;
+  width: 100px;
   padding: 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
