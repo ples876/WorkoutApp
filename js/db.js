@@ -214,6 +214,57 @@ async function getLastCompletedWorkout(programId, workoutNumber) {
   };
 }
 
+// ===== DATA EXPORT/IMPORT =====
+
+async function exportAllData() {
+  const exercises = await db.exercises.toArray();
+  const programs = await db.programs.toArray();
+  const workoutSessions = await db.workoutSessions.toArray();
+  const sets = await db.sets.toArray();
+
+  return {
+    version: 1,
+    exportDate: new Date().toISOString(),
+    data: {
+      exercises,
+      programs,
+      workoutSessions,
+      sets
+    }
+  };
+}
+
+async function importAllData(importedData) {
+  // Validate data structure
+  if (!importedData.version || !importedData.data) {
+    throw new Error('Invalid data format');
+  }
+
+  const { exercises, programs, workoutSessions, sets } = importedData.data;
+
+  // Clear all existing data
+  await db.exercises.clear();
+  await db.programs.clear();
+  await db.workoutSessions.clear();
+  await db.sets.clear();
+
+  // Import new data
+  if (exercises && exercises.length > 0) {
+    await db.exercises.bulkAdd(exercises);
+  }
+  if (programs && programs.length > 0) {
+    await db.programs.bulkAdd(programs);
+  }
+  if (workoutSessions && workoutSessions.length > 0) {
+    await db.workoutSessions.bulkAdd(workoutSessions);
+  }
+  if (sets && sets.length > 0) {
+    await db.sets.bulkAdd(sets);
+  }
+
+  return true;
+}
+
 // ===== EXPORT/IMPORT OPERATIONS =====
 
 async function exportData() {

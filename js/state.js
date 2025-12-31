@@ -9,6 +9,7 @@ const state = {
   activeWorkout: null,
   viewingExerciseHistory: null, // exercise ID when viewing history
   historyReturnContext: null, // 'exercises' or 'workout' - where to return after viewing history
+  creatingCustomExercise: false, // true when showing custom exercise form
   listeners: []
 };
 
@@ -85,5 +86,17 @@ function viewExerciseHistory(exerciseId, returnContext) {
 function exitExerciseHistory() {
   state.viewingExerciseHistory = null;
   state.historyReturnContext = null;
+  notifyListeners();
+}
+
+// Show custom exercise creation form
+function showCustomExerciseForm() {
+  state.creatingCustomExercise = true;
+  notifyListeners();
+}
+
+// Hide custom exercise creation form
+function hideCustomExerciseForm() {
+  state.creatingCustomExercise = false;
   notifyListeners();
 }

@@ -124,6 +124,12 @@ async function renderExercises() {
     return;
   }
 
+  // Check if creating custom exercise
+  if (state.creatingCustomExercise) {
+    renderCustomExerciseForm();
+    return;
+  }
+
   const container = document.getElementById('exercises-content');
   const groupedExercises = getExercisesGroupedByMuscleGroup();
 
@@ -132,7 +138,11 @@ async function renderExercises() {
     return;
   }
 
-  let html = '';
+  let html = `
+    <div class="exercises-header">
+      <button id="create-custom-exercise-btn" class="btn-primary">Create Custom Exercise</button>
+    </div>
+  `;
 
   // Render exercises grouped by muscle group
   Object.keys(groupedExercises).sort().forEach(muscleGroup => {
@@ -151,6 +161,7 @@ async function renderExercises() {
           <span class="exercise-name">${exercise.name}</span>
           <div class="exercise-item-actions">
             ${exercise.isCustom ? '<span class="custom-badge">Custom</span>' : ''}
+            ${exercise.isCustom ? `<button class="btn-delete-exercise" data-exercise-id="${exercise.id}">Delete</button>` : ''}
             <button class="btn-view-history" data-exercise-id="${exercise.id}">View History</button>
           </div>
         </div>
@@ -165,6 +176,48 @@ async function renderExercises() {
 
   container.innerHTML = html;
   setupExerciseListeners();
+}
+
+function renderCustomExerciseForm() {
+  const container = document.getElementById('exercises-content');
+
+  let html = `
+    <div class="custom-exercise-form">
+      <div class="form-header">
+        <button id="back-from-custom-exercise-btn" class="btn-back">← Back</button>
+        <h2>Create Custom Exercise</h2>
+      </div>
+
+      <form id="custom-exercise-form">
+        <div class="form-group">
+          <label for="exercise-name">Exercise Name</label>
+          <input type="text" id="exercise-name" name="name" required placeholder="e.g., Cable Fly">
+        </div>
+
+        <div class="form-group">
+          <label for="muscle-group">Muscle Group</label>
+          <select id="muscle-group" name="muscleGroup" required>
+            <option value="">Select muscle group...</option>
+  `;
+
+  Object.keys(MUSCLE_GROUPS).forEach(key => {
+    html += `<option value="${key}">${MUSCLE_GROUPS[key]}</option>`;
+  });
+
+  html += `
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Create Exercise</button>
+          <button type="button" id="cancel-custom-exercise-btn" class="btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  container.innerHTML = html;
+  setupCustomExerciseFormListeners();
 }
 
 // ===== PROGRAM RENDERING =====
@@ -782,6 +835,14 @@ function setupWorkoutLoggingListeners(sessionId) {
 }
 
 function setupExerciseListeners() {
+  // Create Custom Exercise button
+  const createBtn = document.getElementById('create-custom-exercise-btn');
+  if (createBtn) {
+    createBtn.addEventListener('click', () => {
+      showCustomExerciseForm();
+    });
+  }
+
   // View History buttons (from exercises tab)
   document.querySelectorAll('.btn-view-history').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -789,6 +850,41 @@ function setupExerciseListeners() {
       viewExerciseHistory(exerciseId, 'exercises');
     });
   });
+
+  // Delete Exercise buttons
+  document.querySelectorAll('.btn-delete-exercise').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const exerciseId = parseInt(btn.dataset.exerciseId);
+      await handleDeleteExercise(exerciseId);
+    });
+  });
+}
+
+function setupCustomExerciseFormListeners() {
+  // Form submission
+  const form = document.getElementById('custom-exercise-form');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await handleCreateCustomExercise(e);
+    });
+  }
+
+  // Back button
+  const backBtn = document.getElementById('back-from-custom-exercise-btn');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      hideCustomExerciseForm();
+    });
+  }
+
+  // Cancel button
+  const cancelBtn = document.getElementById('cancel-custom-exercise-btn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      hideCustomExerciseForm();
+    });
+  }
 }
 
 function setupHistoryListeners() {
@@ -798,6 +894,28 @@ function setupHistoryListeners() {
     backBtn.addEventListener('click', () => {
       exitExerciseHistory();
     });
+  }
+}
+
+function setupSettingsListeners() {
+  // Export data button
+  const exportBtn = document.getElementById('export-data-btn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', handleExportData);
+  }
+
+  // Import data button
+  const importBtn = document.getElementById('import-data-btn');
+  if (importBtn) {
+    importBtn.addEventListener('click', () => {
+      document.getElementById('import-file-input').click();
+    });
+  }
+
+  // File input change
+  const fileInput = document.getElementById('import-file-input');
+  if (fileInput) {
+    fileInput.addEventListener('change', handleImportData);
   }
 }
 
@@ -876,6 +994,56 @@ async function handleDeleteSet(setId) {
   }
 }
 
+async function handleCreateCustomExercise(event) {
+  const formData = new FormData(event.target);
+  const name = formData.get('name').trim();
+  const muscleGroup = formData.get('muscleGroup');
+
+  if (!name || !muscleGroup) {
+    alert('Please fill in all fields');
+    return;
+  }
+
+  // Check for duplicate name
+  const existingExercise = state.exercises.find(e => e.name.toLowerCase() === name.toLowerCase());
+  if (existingExercise) {
+    alert('An exercise with this name already exists');
+    return;
+  }
+
+  try {
+    await addCustomExercise(name, muscleGroup);
+    await loadExercises();
+    hideCustomExerciseForm();
+    alert('Custom exercise created successfully!');
+  } catch (error) {
+    console.error('Failed to create custom exercise:', error);
+    alert('Failed to create exercise. Please try again.');
+  }
+}
+
+async function handleDeleteExercise(exerciseId) {
+  const exercise = state.exercises.find(e => e.id === exerciseId);
+  if (!exercise) return;
+
+  if (!confirm(`Delete "${exercise.name}"? This cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    await deleteExercise(exerciseId);
+    await loadExercises();
+    alert('Exercise deleted successfully!');
+  } catch (error) {
+    console.error('Failed to delete exercise:', error);
+    if (error.message.includes('workout history')) {
+      alert('Cannot delete this exercise because it has workout history.');
+    } else {
+      alert('Failed to delete exercise. Please try again.');
+    }
+  }
+}
+
 async function handleFinishWorkout(sessionId) {
   try {
     // Mark session as complete
@@ -912,6 +1080,89 @@ async function handleCancelWorkout(sessionId) {
     console.error('Failed to cancel workout:', error);
     alert('Failed to cancel workout. Please try again.');
   }
+}
+
+// ===== SETTINGS ACTION HANDLERS =====
+
+async function handleExportData() {
+  try {
+    const data = await exportAllData();
+
+    // Create a blob and download link
+    const dataStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    // Create download link and trigger it
+    const link = document.createElement('a');
+    link.href = url;
+    const date = new Date().toISOString().split('T')[0];
+    link.download = `workout-data-${date}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Clean up
+    URL.revokeObjectURL(url);
+
+    alert('Data exported successfully!');
+  } catch (error) {
+    console.error('Failed to export data:', error);
+    alert('Failed to export data. Please try again.');
+  }
+}
+
+async function handleImportData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = async (e) => {
+    try {
+      const importedData = JSON.parse(e.target.result);
+
+      // Show preview of what will be imported
+      const { exercises, programs, workoutSessions, sets } = importedData.data;
+      const preview = `
+Import Preview:
+- ${exercises?.length || 0} exercises
+- ${programs?.length || 0} programs
+- ${workoutSessions?.length || 0} workout sessions
+- ${sets?.length || 0} sets
+
+WARNING: This will delete ALL existing data and replace it with the imported data.
+
+Do you want to continue?`;
+
+      if (!confirm(preview)) {
+        // Reset file input
+        event.target.value = '';
+        return;
+      }
+
+      // Import the data
+      await importAllData(importedData);
+
+      // Reload state
+      await refreshState();
+
+      // Reset file input
+      event.target.value = '';
+
+      alert('Data imported successfully! The app will now refresh.');
+
+      // Refresh the page to ensure clean state
+      window.location.reload();
+
+    } catch (error) {
+      console.error('Failed to import data:', error);
+      alert('Failed to import data. Please make sure the file is a valid export.');
+      event.target.value = '';
+    }
+  };
+
+  reader.readAsText(file);
 }
 
 // ===== PROGRAM ACTION HANDLERS =====
@@ -1051,6 +1302,41 @@ function handleRemoveExerciseFromWorkout(workoutNumber, index) {
   container.innerHTML = renderWorkoutExercises(workoutData[workoutNumber]);
 }
 
+// ===== SETTINGS RENDERING =====
+
+function renderSettings() {
+  const container = document.getElementById('settings-content');
+
+  let html = `
+    <div class="settings-section">
+      <h2>Data Management</h2>
+
+      <div class="settings-item">
+        <h3>Export Data</h3>
+        <p>Download all your workout data as a JSON file. Use this to backup your data or transfer to another device.</p>
+        <button id="export-data-btn" class="btn-primary">Export All Data</button>
+      </div>
+
+      <div class="settings-item">
+        <h3>Import Data</h3>
+        <p><strong>Warning:</strong> This will replace all existing data with the imported data. Make sure to export your current data first if you want to keep it.</p>
+        <input type="file" id="import-file-input" accept=".json" style="display: none;">
+        <button id="import-data-btn" class="btn-secondary">Import Data</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>About</h2>
+      <p class="settings-info">Workout App v1.0</p>
+      <p class="settings-info">Privacy-focused workout tracking</p>
+      <p class="settings-info">All data stored locally on your device</p>
+    </div>
+  `;
+
+  container.innerHTML = html;
+  setupSettingsListeners();
+}
+
 // ===== MAIN RENDER FUNCTION =====
 
 function render() {
@@ -1064,6 +1350,9 @@ function render() {
       break;
     case 'exercises':
       renderExercises();
+      break;
+    case 'settings':
+      renderSettings();
       break;
   }
 }

@@ -750,6 +750,128 @@ h3 {
   color: var(--text-primary);
 }
 
+/* Custom Exercise Form */
+.custom-exercise-form {
+  max-width: 100%;
+}
+
+.exercises-header {
+  margin-bottom: var(--spacing-md);
+}
+
+.form-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.form-header h2 {
+  margin: 0;
+}
+
+.form-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+}
+
+.form-actions button {
+  flex: 1;
+}
+
+.btn-delete-exercise {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  background-color: #fee;
+  color: #dc2626;
+  border: 1px solid #fdd;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-delete-exercise:hover {
+  background-color: #fdd;
+}
+
+/* Settings */
+.settings-section {
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-section:last-child {
+  border-bottom: none;
+}
+
+.settings-section h2 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: 1.25rem;
+}
+
+.settings-item {
+  background-color: var(--surface);
+  padding: var(--spacing-md);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  margin-bottom: var(--spacing-md);
+}
+
+.settings-item:last-child {
+  margin-bottom: 0;
+}
+
+.settings-item h3 {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.settings-item p {
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.settings-item button {
+  margin-top: var(--spacing-sm);
+}
+
+.settings-info {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin: var(--spacing-xs) 0;
+}
+
 /* Responsive adjustments */
 @media (min-width: 768px) {
   #main-content {
