@@ -163,7 +163,7 @@ async function renderExercises() {
             class="exercise-notes"
             data-exercise-id="${exercise.id}"
             placeholder="Add notes (e.g., form cues, PRs, preferences)..."
-            rows="2"
+            rows="1"
           >${notes}</textarea>
           <div class="exercise-item">
             <span class="exercise-name">${exercise.name}</span>
@@ -609,7 +609,7 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
           class="exercise-notes workout-notes"
           data-exercise-id="${ex.exerciseId}"
           placeholder="Add notes (e.g., form cues, PRs, preferences)..."
-          rows="2"
+          rows="1"
         >${exerciseNotes}</textarea>
         <div class="exercise-header">
           <h3>${exerciseName}</h3>
