@@ -162,7 +162,7 @@ async function renderExercises() {
           <textarea
             class="exercise-notes"
             data-exercise-id="${exercise.id}"
-            placeholder="Add notes (e.g., form cues, PRs, preferences)..."
+            placeholder="Add notes (e.g., form cues, PRs)..."
             rows="1"
           >${notes}</textarea>
           <div class="exercise-item">
