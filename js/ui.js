@@ -608,7 +608,7 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
         <textarea
           class="exercise-notes workout-notes"
           data-exercise-id="${ex.exerciseId}"
-          placeholder="Add notes (e.g., form cues, PRs, preferences)..."
+          placeholder="Add notes (e.g., form cues, PRs)..."
           rows="1"
         >${exerciseNotes}</textarea>
         <div class="exercise-header">
