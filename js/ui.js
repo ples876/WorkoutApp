@@ -1018,7 +1018,7 @@ async function handleLogSet(sessionId, exerciseId) {
   const weight = parseFloat(weightInput.value);
   const reps = parseInt(repsInput.value);
 
-  if (!weight || weight <= 0 || !reps || reps <= 0) {
+  if (isNaN(weight) || weight < 0 || !reps || reps <= 0) {
     alert('Please enter valid weight and reps');
     return;
   }
