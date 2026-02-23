@@ -160,7 +160,7 @@ state = {
 - **Weight Persistence**: After logging first set, weight stays pre-filled
 - **Auto-focus**: Reps input gets focus after logging
 - **Last Time Reference**: Shows previous workout data (grouped by weight)
-- **Edit/Delete Sets**: Modify logged sets before finishing
+- **Delete Sets**: Remove logged sets before finishing workout
 
 **Key Functions**:
 - `renderActiveWorkout()` - Router function
@@ -192,24 +192,33 @@ state = {
 - `exitExerciseHistory()` - Navigate out
 
 ### 4. Exercise Notes
-**Location**: Exercises tab + Workout tab (sticky note UI)
+**Location**: Exercises tab + Workout tab
 
-- **Always visible**: Yellow textarea above exercise name
+- **Always visible**: Compact textarea above exercise name
 - **Auto-save**: On blur (click away)
-- **Auto-resize**: Expands as user types
+- **Auto-expand**: Single-line when unfocused, expands to 4rem when focused
 - **Exercise-specific**: Not session-specific (persists across workouts)
+- **Placeholder**: "Note..." (short and subtle)
 
-**Styling**: Light yellow background (#fffef5), brown border (#e5d5b0)
+**Styling**: Uses CSS variables (--note-bg, --note-border) for theme support
 
 ### 5. Custom Exercises
 **Location**: Exercises tab
 
 - Create with name + muscle group
 - Delete with confirmation (blocked if has history)
-- Custom badge to distinguish from defaults
+- Italic styling to distinguish from defaults (no badge)
 - Stored with `isCustom: true`
 
-### 6. Data Export/Import
+### 6. Dark Mode
+**Location**: Settings tab
+
+- **Toggle switch**: Manual light/dark mode selection
+- **Persistence**: Saved to localStorage, restored on app load
+- **Implementation**: CSS custom properties with `body.dark-mode` class
+- **Colors**: All UI elements adapt via CSS variables
+
+### 7. Data Export/Import
 **Location**: Settings tab
 
 **Export**:
@@ -248,15 +257,21 @@ state = {
 - Touch-friendly button sizes
 
 ### Color Scheme
+Uses CSS custom properties for theming:
 ```css
+/* Light mode (default) */
 --primary-color: #3b82f6 (blue)
---primary-hover: #2563eb
---secondary-color: #64748b (gray)
---surface: #f8f9fa (light gray background)
---border: #e2e8f0
+--background: #ffffff
+--surface: #f8f9fa
 --text-primary: #1e293b
---text-secondary: #64748b
+
+/* Dark mode (body.dark-mode) */
+--primary-color: #60a5fa (lighter blue)
+--background: #0f172a
+--surface: #1e293b
+--text-primary: #f1f5f9
 ```
+All colors adapt automatically via CSS variables
 
 ---
 
@@ -449,7 +464,6 @@ Before deploying major changes:
 - [ ] Start workout from preview
 - [ ] Log sets (weight + reps)
 - [ ] Weight persists after first set
-- [ ] Edit logged set
 - [ ] Delete logged set
 - [ ] View "Last Time" reference
 - [ ] View exercise history from workout
@@ -461,6 +475,11 @@ Before deploying major changes:
 - [ ] Export data to JSON
 - [ ] Import data (shows preview)
 - [ ] Import replaces all data correctly
+
+**Appearance**
+- [ ] Toggle dark mode on/off
+- [ ] Dark mode persists across page refresh
+- [ ] All UI elements adapt to theme
 
 **Edge Cases**
 - [ ] Log bodyweight exercise (0kg)

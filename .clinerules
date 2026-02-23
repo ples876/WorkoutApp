@@ -55,6 +55,8 @@ Before completing work:
 - Import uses replace-only strategy (no merge)
 - Notes are exercise-specific, not session-specific
 - Cycles not weeks (more general terminology)
+- Dark mode: CSS variables with localStorage persistence
+- Custom exercises: Marked with italic styling (no badge)
 
 ## When Adding Features
 1. Ask if database schema change needed
@@ -67,6 +69,7 @@ Before completing work:
 - Program cycles: `programs.completedCycles` (number)
 - Active workout session: `state.activeWorkout` (object or null)
 - Current tab: `state.currentTab` (string)
+- Theme preference: `localStorage.getItem('theme')` ('dark' or 'light')
 
 ## Deployment
 - Hosted on GitHub Pages
