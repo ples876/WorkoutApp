@@ -24,6 +24,19 @@ db.version(2).stores({
   });
 });
 
+// Version 3: Add completedCycles field to programs
+db.version(3).stores({
+  exercises: '++id, name, muscleGroup, isCustom',
+  programs: '++id, name, isActive',
+  workoutSessions: '++id, programId, workoutNumber, date, isComplete',
+  sets: '++id, workoutSessionId, exerciseId, weight, reps, timestamp'
+}).upgrade(tx => {
+  // Add completedCycles field to existing programs (default to 0)
+  return tx.table('programs').toCollection().modify(program => {
+    program.completedCycles = program.completedCycles || 0;
+  });
+});
+
 // Database initialization
 async function initDatabase() {
   try {
@@ -146,10 +159,21 @@ async function advanceWorkout(programId) {
   const totalWorkouts = program.workouts ? program.workouts.length : 0;
   if (totalWorkouts === 0) return;
 
-  // Advance to next workout, loop back to 1 if at the end
-  const nextWorkout = program.currentWorkout >= totalWorkouts ? 1 : program.currentWorkout + 1;
+  const currentWorkout = program.currentWorkout || 1;
 
-  await db.programs.update(programId, { currentWorkout: nextWorkout });
+  // Check if we're completing the last workout
+  const isLastWorkout = currentWorkout >= totalWorkouts;
+
+  // Advance to next workout, loop back to 1 if at the end
+  const nextWorkout = isLastWorkout ? 1 : currentWorkout + 1;
+
+  // If completing the cycle, increment completedCycles
+  const updates = { currentWorkout: nextWorkout };
+  if (isLastWorkout) {
+    updates.completedCycles = (program.completedCycles || 0) + 1;
+  }
+
+  await db.programs.update(programId, updates);
 }
 
 // ===== WORKOUT SESSION OPERATIONS =====

@@ -519,10 +519,13 @@ async function renderActiveWorkout() {
 }
 
 function renderWorkoutPreview(container, program, workoutNumber, workout) {
+  const totalWorkouts = program.workouts ? program.workouts.length : 0;
+  const currentCycle = (program.completedCycles || 0) + 1;
+
   let html = `
     <div class="active-workout">
       <h2>${program.name}</h2>
-      <p class="workout-subtitle">Workout ${workoutNumber}</p>
+      <p class="workout-subtitle">Cycle ${currentCycle} • Workout ${workoutNumber} of ${totalWorkouts}</p>
 
       <div class="workout-exercises-preview">
         <h3>Today's Exercises:</h3>
@@ -584,10 +587,13 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
   // Get last completed workout for reference
   const lastWorkout = await getLastCompletedWorkout(program.id, workoutNumber);
 
+  const totalWorkouts = program.workouts ? program.workouts.length : 0;
+  const currentCycle = (program.completedCycles || 0) + 1;
+
   let html = `
     <div class="active-workout">
       <h2>${program.name}</h2>
-      <p class="workout-subtitle">Workout ${workoutNumber}</p>
+      <p class="workout-subtitle">Cycle ${currentCycle} • Workout ${workoutNumber} of ${totalWorkouts}</p>
   `;
 
   // Render each exercise
