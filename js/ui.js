@@ -650,7 +650,6 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
             <span class="set-number">Set ${index + 1}:</span>
             <span class="set-data">${set.weight}kg × ${set.reps} reps</span>
             <div class="set-actions">
-              <button class="btn-edit-set" data-set-id="${set.id}" data-weight="${set.weight}" data-reps="${set.reps}" data-exercise-id="${ex.exerciseId}">Edit</button>
               <button class="btn-delete-set" data-set-id="${set.id}">Delete</button>
             </div>
           </div>
@@ -849,17 +848,6 @@ function setupWorkoutLoggingListeners(sessionId) {
     });
   });
 
-  // Edit Set buttons
-  document.querySelectorAll('.btn-edit-set').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const setId = parseInt(btn.dataset.setId);
-      const weight = parseFloat(btn.dataset.weight);
-      const reps = parseInt(btn.dataset.reps);
-      const exerciseId = parseInt(btn.dataset.exerciseId);
-      handleEditSet(setId, weight, reps, exerciseId);
-    });
-  });
-
   // Delete Set buttons
   document.querySelectorAll('.btn-delete-set').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1052,24 +1040,6 @@ async function handleLogSet(sessionId, exerciseId) {
     console.error('Failed to log set:', error);
     alert('Failed to log set. Please try again.');
   }
-}
-
-async function handleEditSet(setId, currentWeight, currentReps, exerciseId) {
-  // Populate inputs with current values
-  const weightInput = document.querySelector(`.weight-input[data-exercise-id="${exerciseId}"]`);
-  const repsInput = document.querySelector(`.reps-input[data-exercise-id="${exerciseId}"]`);
-
-  weightInput.value = currentWeight;
-  repsInput.value = currentReps;
-
-  // Delete the old set
-  await deleteSet(setId);
-
-  // Re-render
-  await renderActiveWorkout();
-
-  // Focus on weight input
-  weightInput.focus();
 }
 
 async function handleDeleteSet(setId) {
