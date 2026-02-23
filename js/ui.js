@@ -1026,12 +1026,23 @@ async function handleLogSet(sessionId, exerciseId) {
   try {
     await logSet(sessionId, exerciseId, weight, reps);
 
-    // Clear inputs
-    weightInput.value = '';
+    // Keep the weight, clear only reps
     repsInput.value = '';
 
     // Re-render to show new set
     await renderActiveWorkout();
+
+    // After re-render, restore the weight value and focus on reps
+    setTimeout(() => {
+      const newWeightInput = document.querySelector(`.weight-input[data-exercise-id="${exerciseId}"]`);
+      const newRepsInput = document.querySelector(`.reps-input[data-exercise-id="${exerciseId}"]`);
+      if (newWeightInput) {
+        newWeightInput.value = weight;
+      }
+      if (newRepsInput) {
+        newRepsInput.focus();
+      }
+    }, 0);
   } catch (error) {
     console.error('Failed to log set:', error);
     alert('Failed to log set. Please try again.');
