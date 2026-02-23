@@ -175,22 +175,28 @@ h3 {
 
 .exercise-notes {
   width: 100%;
-  padding: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
   border: 1px solid var(--note-border);
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-family: inherit;
-  resize: vertical;
-  min-height: auto;
+  resize: none;
+  overflow: hidden;
   background-color: var(--note-bg);
   color: var(--text-primary);
   margin-bottom: 0.25rem;
+  transition: all 0.2s ease;
+  height: 2rem;
+  line-height: 1.4;
 }
 
 .exercise-notes:focus {
   outline: none;
   border-color: var(--note-border-focus);
   background-color: var(--note-bg-focus);
+  height: auto;
+  min-height: 4rem;
+  overflow-y: auto;
 }
 
 .exercise-notes::placeholder {
