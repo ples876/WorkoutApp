@@ -974,6 +974,12 @@ function setupHistoryListeners() {
 }
 
 function setupSettingsListeners() {
+  // Dark mode toggle
+  const darkModeToggle = document.getElementById('dark-mode-toggle');
+  if (darkModeToggle) {
+    darkModeToggle.addEventListener('change', handleDarkModeToggle);
+  }
+
   // Export data button
   const exportBtn = document.getElementById('export-data-btn');
   if (exportBtn) {
@@ -1180,6 +1186,24 @@ async function handleCancelWorkout(sessionId) {
 }
 
 // ===== SETTINGS ACTION HANDLERS =====
+
+function handleDarkModeToggle(event) {
+  const isDark = event.target.checked;
+
+  if (isDark) {
+    document.body.classList.add('dark-mode');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    document.body.classList.remove('dark-mode');
+    localStorage.setItem('theme', 'light');
+  }
+
+  // Update the label text
+  const label = document.querySelector('.toggle-label');
+  if (label) {
+    label.textContent = isDark ? 'Dark Mode' : 'Light Mode';
+  }
+}
 
 async function handleExportData() {
   try {
@@ -1416,7 +1440,23 @@ function handleMoveExercise(workoutNumber, index, direction) {
 function renderSettings() {
   const container = document.getElementById('settings-content');
 
+  const isDarkMode = document.body.classList.contains('dark-mode');
+
   let html = `
+    <div class="settings-section">
+      <h2>Appearance</h2>
+
+      <div class="settings-item">
+        <h3>Dark Mode</h3>
+        <p>Switch between light and dark theme</p>
+        <label class="theme-toggle">
+          <input type="checkbox" id="dark-mode-toggle" ${isDarkMode ? 'checked' : ''}>
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">${isDarkMode ? 'Dark' : 'Light'} Mode</span>
+        </label>
+      </div>
+    </div>
+
     <div class="settings-section">
       <h2>Data Management</h2>
 

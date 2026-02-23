@@ -4,6 +4,12 @@
 async function initApp() {
   console.log('Initializing Workout App...');
 
+  // Load theme preference before anything else
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') {
+    document.body.classList.add('dark-mode');
+  }
+
   try {
     // Initialize database
     console.log('Step 1: Initializing database...');
