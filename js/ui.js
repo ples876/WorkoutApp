@@ -1380,13 +1380,8 @@ function handleAddExerciseToWorkout(workoutNumber) {
   dropdown.value = '';
   setsInput.value = '3';
 
-  // Re-attach listeners for remove buttons
-  container.addEventListener('click', (e) => {
-    if (e.target.classList.contains('btn-remove-exercise')) {
-      const index = parseInt(e.target.dataset.index);
-      handleRemoveExerciseFromWorkout(workoutNumber, index);
-    }
-  });
+  // Note: Event listeners are already set up via event delegation in setupProgramFormListeners
+  // No need to re-attach listeners here
 }
 
 function handleRemoveExerciseFromWorkout(workoutNumber, index) {
