@@ -169,7 +169,7 @@ async function renderExercises() {
             <span class="exercise-name ${exercise.isCustom ? 'custom-exercise' : ''}">${exercise.name}</span>
             <div class="exercise-item-actions">
               ${exercise.isCustom ? `<button class="btn-delete-exercise" data-exercise-id="${exercise.id}">Delete</button>` : ''}
-              <button class="btn-view-history" data-exercise-id="${exercise.id}">View History</button>
+              <button class="btn-view-history" data-exercise-id="${exercise.id}">History</button>
             </div>
           </div>
         </div>
