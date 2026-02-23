@@ -166,9 +166,8 @@ async function renderExercises() {
             rows="1"
           >${notes}</textarea>
           <div class="exercise-item">
-            <span class="exercise-name">${exercise.name}</span>
+            <span class="exercise-name ${exercise.isCustom ? 'custom-exercise' : ''}">${exercise.name}</span>
             <div class="exercise-item-actions">
-              ${exercise.isCustom ? '<span class="custom-badge">Custom</span>' : ''}
               ${exercise.isCustom ? `<button class="btn-delete-exercise" data-exercise-id="${exercise.id}">Delete</button>` : ''}
               <button class="btn-view-history" data-exercise-id="${exercise.id}">View History</button>
             </div>

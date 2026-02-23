@@ -219,6 +219,10 @@ h3 {
   color: var(--text-primary);
 }
 
+.exercise-name.custom-exercise {
+  font-style: italic;
+}
+
 .exercise-item-actions {
   display: flex;
   gap: var(--spacing-xs);
@@ -238,15 +242,6 @@ h3 {
 
 .btn-view-history:hover {
   background-color: var(--primary-hover);
-}
-
-.custom-badge {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  background-color: var(--primary-color);
-  color: white;
-  border-radius: 0.25rem;
-  font-weight: 600;
 }
 
 /* Program list */
