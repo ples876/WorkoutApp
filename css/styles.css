@@ -649,6 +649,42 @@ h3 {
   font-size: 1.125rem;
 }
 
+.exercise-header-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
+.btn-toggle-notes {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-toggle-notes:hover {
+  background-color: #475569;
+}
+
+.btn-toggle-notes.active {
+  background-color: var(--primary-color);
+}
+
+.toggle-chevron {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 0.125rem;
+  transition: transform 0.2s ease;
+}
+
+.btn-toggle-notes.active .toggle-chevron {
+  transform: rotate(180deg);
+}
+
 .btn-view-history-workout {
   padding: 0.375rem 0.75rem;
   font-size: 0.75rem;

@@ -610,16 +610,20 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
 
     html += `
       <div class="exercise-logging" data-exercise-id="${ex.exerciseId}">
+        <div class="exercise-header">
+          <h3>${exerciseName}</h3>
+          <div class="exercise-header-actions">
+            <button class="btn-toggle-notes" data-exercise-id="${ex.exerciseId}">Note <svg class="toggle-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+            <button class="btn-view-history-workout" data-exercise-id="${ex.exerciseId}">History</button>
+          </div>
+        </div>
         <textarea
           class="exercise-notes workout-notes"
           data-exercise-id="${ex.exerciseId}"
           placeholder="Note..."
           rows="1"
+          style="display: none;"
         >${exerciseNotes}</textarea>
-        <div class="exercise-header">
-          <h3>${exerciseName}</h3>
-          <button class="btn-view-history-workout" data-exercise-id="${ex.exerciseId}">History</button>
-        </div>
         <p class="exercise-meta">Target: ${ex.targetSets} sets</p>
     `;
 
@@ -834,10 +838,23 @@ function setupWorkoutLoggingListeners(sessionId) {
       this.style.height = 'auto';
       this.style.height = this.scrollHeight + 'px';
     });
+  });
 
-    // Initial resize
-    textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
+  // Toggle notes buttons
+  document.querySelectorAll('.btn-toggle-notes').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const exerciseId = btn.dataset.exerciseId;
+      const textarea = document.querySelector(`.workout-notes[data-exercise-id="${exerciseId}"]`);
+      if (textarea) {
+        const isHidden = textarea.style.display === 'none';
+        textarea.style.display = isHidden ? '' : 'none';
+        btn.classList.toggle('active', isHidden);
+        if (isHidden) {
+          textarea.style.height = 'auto';
+          textarea.style.height = textarea.scrollHeight + 'px';
+        }
+      }
+    });
   });
 
   // Log Set buttons
