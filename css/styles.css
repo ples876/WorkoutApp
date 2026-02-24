@@ -664,6 +664,8 @@ h3 {
   border-radius: 0.25rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  align-self: flex-start;
 }
 
 .btn-toggle-notes:hover {
