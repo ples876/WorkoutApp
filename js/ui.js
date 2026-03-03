@@ -613,7 +613,7 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
         <div class="exercise-header">
           <h3>${exerciseName}</h3>
           <div class="exercise-header-actions">
-            <button class="btn-toggle-notes" data-exercise-id="${ex.exerciseId}">Note <svg class="toggle-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+            <button class="btn-toggle-notes${exerciseNotes ? ' has-note' : ''}" data-exercise-id="${ex.exerciseId}">Note <svg class="toggle-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
             <button class="btn-view-history-workout" data-exercise-id="${ex.exerciseId}">History</button>
           </div>
         </div>
@@ -831,6 +831,8 @@ function setupWorkoutLoggingListeners(sessionId) {
       const exerciseId = parseInt(textarea.dataset.exerciseId);
       const notes = textarea.value;
       await handleUpdateExerciseNotes(exerciseId, notes);
+      const btn = document.querySelector(`.btn-toggle-notes[data-exercise-id="${exerciseId}"]`);
+      if (btn) btn.classList.toggle('has-note', notes.trim().length > 0);
     });
 
     // Auto-resize textarea based on content
