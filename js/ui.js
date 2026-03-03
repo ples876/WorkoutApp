@@ -615,6 +615,7 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
           <div class="exercise-header-actions">
             <button class="btn-toggle-notes${exerciseNotes ? ' has-note' : ''}" data-exercise-id="${ex.exerciseId}">Note <svg class="toggle-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
             <button class="btn-view-history-workout" data-exercise-id="${ex.exerciseId}">History</button>
+            <button class="btn-collapse-exercise" data-exercise-id="${ex.exerciseId}" title="Minimise exercise"><svg class="collapse-check" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg></button>
           </div>
         </div>
         <textarea
@@ -856,6 +857,17 @@ function setupWorkoutLoggingListeners(sessionId) {
           textarea.style.height = textarea.scrollHeight + 'px';
         }
       }
+    });
+  });
+
+  // Collapse exercise buttons
+  document.querySelectorAll('.btn-collapse-exercise').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const container = btn.closest('.exercise-logging');
+      const minimised = container.classList.toggle('minimised');
+      btn.classList.toggle('minimised', minimised);
+      const noteBtn = container.querySelector('.btn-toggle-notes');
+      if (noteBtn) noteBtn.disabled = minimised;
     });
   });
 
