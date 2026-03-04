@@ -624,9 +624,8 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
 
     // Show "Last Time" if available
     if (lastTimeSets.length > 0) {
-      const lastDate = new Date(lastWorkout.session.date).toLocaleDateString();
       const lastTimeText = formatLastTime(lastTimeSets);
-      html += `<p class="last-time">Last time: ${lastTimeSets.length} sets (${lastTimeText}) (${lastDate})</p>`;
+      html += `<p class="last-time">Last time: ${lastTimeSets.length} sets (${lastTimeText})</p>`;
     }
 
     // Input row
