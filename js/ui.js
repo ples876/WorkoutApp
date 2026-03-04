@@ -854,6 +854,7 @@ function setupWorkoutLoggingListeners(sessionId) {
   });
 
   // Collapse exercise buttons
+  const storageKey = `minimised_${sessionId}`;
   document.querySelectorAll('.btn-collapse-exercise').forEach(btn => {
     btn.addEventListener('click', () => {
       const container = btn.closest('.exercise-logging');
@@ -861,7 +862,29 @@ function setupWorkoutLoggingListeners(sessionId) {
       btn.classList.toggle('minimised', minimised);
       const noteBtn = container.querySelector('.btn-toggle-notes');
       if (noteBtn) noteBtn.disabled = minimised;
+
+      const exerciseId = btn.dataset.exerciseId;
+      const stored = JSON.parse(sessionStorage.getItem(storageKey) || '[]');
+      if (minimised) {
+        if (!stored.includes(exerciseId)) stored.push(exerciseId);
+      } else {
+        const idx = stored.indexOf(exerciseId);
+        if (idx > -1) stored.splice(idx, 1);
+      }
+      sessionStorage.setItem(storageKey, JSON.stringify(stored));
     });
+  });
+
+  // Restore minimised state after refresh
+  const minimisedIds = JSON.parse(sessionStorage.getItem(storageKey) || '[]');
+  minimisedIds.forEach(exerciseId => {
+    const container = document.querySelector(`.exercise-logging[data-exercise-id="${exerciseId}"]`);
+    if (!container) return;
+    container.classList.add('minimised');
+    const collapseBtn = container.querySelector('.btn-collapse-exercise');
+    if (collapseBtn) collapseBtn.classList.add('minimised');
+    const noteBtn = container.querySelector('.btn-toggle-notes');
+    if (noteBtn) noteBtn.disabled = true;
   });
 
   // Log Set buttons
