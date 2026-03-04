@@ -567,16 +567,10 @@ function formatLastTime(sets) {
   const parts = [];
   Object.keys(byWeight).sort((a, b) => parseFloat(b) - parseFloat(a)).forEach(weight => {
     const reps = byWeight[weight];
-    const repsText = reps.join(', ');
-    parts.push(`${weight}kg × ${repsText} reps`);
+    parts.push(`${weight}x${reps.join(',')}`);
   });
 
-  // Join with "and" if multiple weights
-  if (parts.length === 1) {
-    return parts[0];
-  } else {
-    return parts.join(' and ');
-  }
+  return parts.join(' and ');
 }
 
 async function renderWorkoutLogging(container, program, workoutNumber, workout, session) {
@@ -632,13 +626,13 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
     if (lastTimeSets.length > 0) {
       const lastDate = new Date(lastWorkout.session.date).toLocaleDateString();
       const lastTimeText = formatLastTime(lastTimeSets);
-      html += `<p class="last-time">Last time: ${lastTimeSets.length} sets @ ${lastTimeText} (${lastDate})</p>`;
+      html += `<p class="last-time">Last time: ${lastTimeSets.length} sets (${lastTimeText}) (${lastDate})</p>`;
     }
 
     // Input row
     html += `
         <div class="set-input-row">
-          <input type="number" class="weight-input" placeholder="Weight (kg)" step="0.5" min="0" data-exercise-id="${ex.exerciseId}" />
+          <input type="number" class="weight-input" placeholder="Weight" step="0.5" min="0" data-exercise-id="${ex.exerciseId}" />
           <input type="number" class="reps-input" placeholder="Reps" min="1" data-exercise-id="${ex.exerciseId}" />
           <button class="btn-log-set" data-exercise-id="${ex.exerciseId}">Log Set</button>
         </div>
