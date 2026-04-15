@@ -37,6 +37,22 @@ db.version(3).stores({
   });
 });
 
+// Version 4: Add abs exercises to existing databases
+db.version(4).stores({
+  exercises: '++id, name, muscleGroup, isCustom',
+  programs: '++id, name, isActive',
+  workoutSessions: '++id, programId, workoutNumber, date, isComplete',
+  sets: '++id, workoutSessionId, exerciseId, weight, reps, timestamp'
+}).upgrade(async tx => {
+  const existing = await tx.table('exercises').where('muscleGroup').equals('abs').count();
+  if (existing === 0) {
+    await tx.table('exercises').bulkAdd([
+      { name: 'Machine Crunch', muscleGroup: 'abs', isCustom: false, notes: '' },
+      { name: 'Leg Raise', muscleGroup: 'abs', isCustom: false, notes: '' },
+    ]);
+  }
+});
+
 // Database initialization
 async function initDatabase() {
   try {

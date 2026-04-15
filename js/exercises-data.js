@@ -31,6 +31,10 @@ const PREDEFINED_EXERCISES = [
   { id: 18, name: 'Tricep Pushdown', muscleGroup: 'arms', isCustom: false },
   { id: 19, name: 'Overhead Tricep Extension', muscleGroup: 'arms', isCustom: false },
   { id: 20, name: 'Close-Grip Bench Press', muscleGroup: 'arms', isCustom: false },
+
+  // Abs
+  { id: 21, name: 'Machine Crunch', muscleGroup: 'abs', isCustom: false },
+  { id: 22, name: 'Leg Raise', muscleGroup: 'abs', isCustom: false },
 ];
 
 // Muscle group display names
@@ -40,4 +44,5 @@ const MUSCLE_GROUPS = {
   back: 'Back',
   shoulders: 'Shoulders',
   arms: 'Arms',
+  abs: 'Abs',
 };
