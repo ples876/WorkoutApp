@@ -924,10 +924,11 @@ h3 {
 }
 
 .pr-e1rm {
+  display: block;
   font-size: 0.875rem;
   font-weight: 500;
   color: #22c55e;
-  margin-left: 0.4rem;
+  margin-top: 0.15rem;
 }
 
 /* Custom Exercise Form */
