@@ -24,6 +24,13 @@ function setupTabNavigation() {
   });
 }
 
+// ===== PR CALCULATION =====
+
+function calcE1RM(weight, reps) {
+  if (reps <= 0 || weight <= 0) return 0;
+  return weight / Math.max(0.03, 1.0278 - 0.0278 * reps);
+}
+
 // ===== EXERCISE RENDERING =====
 
 async function renderExerciseHistory(exerciseId) {
@@ -68,7 +75,7 @@ async function renderExerciseHistory(exerciseId) {
     <div class="exercise-history">
       <div class="history-header">
         <button id="back-from-history-btn" class="btn-back">← Back</button>
-        <h2>${exercise.name}</h2>
+        <h2>${exercise.name}${allTimeBest > 0 ? ` <span class="pr-e1rm">est. 1RM: ${Math.round(allTimeBest)}kg</span>` : ''}</h2>
       </div>
   `;
 
@@ -90,9 +97,18 @@ async function renderExerciseHistory(exerciseId) {
 
   sessions.sort((a, b) => new Date(b.session.date) - new Date(a.session.date));
 
+  // Flag PR sessions (walk oldest→newest, track running best e1RM)
+  let runningBest = 0;
+  for (const s of [...sessions].reverse()) {
+    s.bestE1RM = Math.max(0, ...s.sets.map(set => calcE1RM(set.weight, set.reps)));
+    s.isPR = s.bestE1RM > runningBest;
+    if (s.isPR) runningBest = s.bestE1RM;
+  }
+  const allTimeBest = runningBest;
+
   // Render each session
   html += '<div class="history-sessions">';
-  sessions.forEach(({ session, program, sets }) => {
+  sessions.forEach(({ session, program, sets, isPR }) => {
     const date = new Date(session.date).toLocaleDateString();
     const programName = program ? program.name : 'Unknown Program';
     const workoutNumber = session.workoutNumber;
@@ -101,7 +117,7 @@ async function renderExerciseHistory(exerciseId) {
     html += `
       <div class="history-session">
         <div class="session-info">
-          <h3>${programName} - Workout ${workoutNumber}</h3>
+          <h3>${programName} - Workout ${workoutNumber}${isPR ? ' <span class="pr-badge">PR</span>' : ''}</h3>
           <p class="session-date">${date}</p>
         </div>
         <div class="session-sets">
