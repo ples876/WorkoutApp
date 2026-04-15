@@ -70,15 +70,6 @@ async function renderExerciseHistory(exerciseId) {
     sessionMap[set.workoutSessionId].push(set);
   }
 
-  // Get session details and build history HTML
-  let html = `
-    <div class="exercise-history">
-      <div class="history-header">
-        <button id="back-from-history-btn" class="btn-back">← Back</button>
-        <h2>${exercise.name}${allTimeBest > 0 ? ` <span class="pr-e1rm">est. 1RM: ${Math.round(allTimeBest)}kg</span>` : ''}</h2>
-      </div>
-  `;
-
   // Get all sessions and sort by date (newest first)
   const sessionIds = Object.keys(sessionMap).map(id => parseInt(id));
   const sessions = [];
@@ -105,6 +96,15 @@ async function renderExerciseHistory(exerciseId) {
     if (s.isPR) runningBest = s.bestE1RM;
   }
   const allTimeBest = runningBest;
+
+  // Build history HTML
+  let html = `
+    <div class="exercise-history">
+      <div class="history-header">
+        <button id="back-from-history-btn" class="btn-back">← Back</button>
+        <h2>${exercise.name}${allTimeBest > 0 ? ` <span class="pr-e1rm">est. 1RM: ${Math.round(allTimeBest)}kg</span>` : ''}</h2>
+      </div>
+  `;
 
   // Render each session
   html += '<div class="history-sessions">';
