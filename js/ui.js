@@ -249,6 +249,7 @@ function renderCustomExerciseForm() {
 // Track current view state
 let currentProgramView = 'list'; // 'list', 'create', 'edit', 'detail'
 let currentProgramId = null;
+let copySourceProgramId = null; // when creating a copy, the program to pre-fill from
 
 function renderPrograms() {
   switch (currentProgramView) {
@@ -295,6 +296,7 @@ function renderProgramList() {
           ${!program.isActive ? `<button class="btn-primary btn-small start-program-btn" data-program-id="${program.id}">Start</button>` : ''}
           <button class="btn-secondary btn-small view-program-btn" data-program-id="${program.id}">View</button>
           <button class="btn-secondary btn-small edit-program-btn" data-program-id="${program.id}">Edit</button>
+          <button class="btn-secondary btn-small copy-program-btn" data-program-id="${program.id}">Copy</button>
           <button class="btn-secondary btn-small delete-program-btn" data-program-id="${program.id}">Delete</button>
         </div>
       </div>
@@ -313,14 +315,21 @@ function renderProgramForm(programId) {
   const isEdit = programId !== null;
   const program = isEdit ? state.programs.find(p => p.id === programId) : null;
 
-  const programName = program ? program.name : '';
-  const workouts = program && program.workouts ? program.workouts : [];
+  // When creating a copy, pre-fill the form from the source program
+  const source = (!isEdit && copySourceProgramId != null)
+    ? state.programs.find(p => p.id === copySourceProgramId)
+    : null;
+  const isCopy = source != null;
+  const base = program || source;
+
+  const programName = isEdit ? program.name : (source ? `Copy of ${source.name}` : '');
+  const workouts = base && base.workouts ? base.workouts : [];
 
   // Clear workoutData for fresh form
   Object.keys(workoutData).forEach(key => delete workoutData[key]);
 
-  // Initialize workoutData with existing workout data if editing
-  if (isEdit && workouts.length > 0) {
+  // Initialize workoutData with existing workout data (when editing or copying)
+  if (workouts.length > 0) {
     workouts.forEach(workout => {
       workoutData[workout.workoutNumber] = [...workout.exercises];
     });
@@ -330,7 +339,7 @@ function renderProgramForm(programId) {
     <div class="program-form">
       <div class="form-header">
         <button id="back-to-list-btn" class="btn-back">← Back</button>
-        <h2>${isEdit ? 'Edit Program' : 'Create Program'}</h2>
+        <h2>${isEdit ? 'Edit Program' : (isCopy ? 'Copy Program' : 'Create Program')}</h2>
       </div>
 
       <div class="form-group">
@@ -705,9 +714,20 @@ function setupProgramListeners() {
     createBtn.addEventListener('click', () => {
       currentProgramView = 'create';
       currentProgramId = null;
+      copySourceProgramId = null;
       renderPrograms();
     });
   }
+
+  // Copy buttons - open the create form pre-filled from an existing program
+  document.querySelectorAll('.copy-program-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      copySourceProgramId = parseInt(btn.dataset.programId);
+      currentProgramId = null;
+      currentProgramView = 'create';
+      renderPrograms();
+    });
+  });
 
   // View buttons
   document.querySelectorAll('.view-program-btn').forEach(btn => {
@@ -723,6 +743,7 @@ function setupProgramListeners() {
     btn.addEventListener('click', () => {
       currentProgramId = parseInt(btn.dataset.programId);
       currentProgramView = 'edit';
+      copySourceProgramId = null;
       renderPrograms();
     });
   });
@@ -759,6 +780,7 @@ function setupProgramFormListeners(programId) {
     backBtn.addEventListener('click', () => {
       currentProgramView = 'list';
       currentProgramId = null;
+      copySourceProgramId = null;
       renderPrograms();
     });
   }
@@ -768,6 +790,7 @@ function setupProgramFormListeners(programId) {
     cancelBtn.addEventListener('click', () => {
       currentProgramView = 'list';
       currentProgramId = null;
+      copySourceProgramId = null;
       renderPrograms();
     });
   }
@@ -1641,6 +1664,7 @@ async function handleSaveProgram(programId) {
     await loadPrograms();
     currentProgramView = 'list';
     currentProgramId = null;
+    copySourceProgramId = null;
   } catch (error) {
     console.error('Failed to save program:', error);
     alert('Failed to save program. Please try again.');
