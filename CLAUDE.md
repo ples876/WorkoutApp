@@ -4,8 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A privacy-first workout tracker: a static, offline web app (no server, no cloud, no accounts). All data lives in the browser's IndexedDB via Dexie.js (loaded from CDN). Vanilla HTML/CSS/JS with **no framework and no build step**. Deep reference docs already exist — read [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for the full data model/feature docs and [README.md](README.md) for product scope. Note: both those files (and `.clinerules`) predate later work and say the DB is "v3" — the current schema is **v5** (see `js/db.js`).
-
+A privacy-first workout tracker: a static, offline web app (no server, no cloud, no accounts). All data lives in the browser's IndexedDB via Dexie.js (loaded from CDN). Vanilla HTML/CSS/JS with **no framework and no build step**. Deep reference docs already exist — read [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for the full data model/feature docs and [README.md](README.md) for product scope.
 ## Commands
 
 There is **no build, lint, or test tooling** — nothing to compile and no test suite.
