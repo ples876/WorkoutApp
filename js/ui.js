@@ -930,7 +930,7 @@ function setupWorkoutLoggingListeners(sessionId) {
   // Finish Workout button
   const finishBtn = document.getElementById('finish-workout-btn');
   if (finishBtn) {
-    finishBtn.addEventListener('click', () => handleFinishWorkout(sessionId));
+    finishBtn.addEventListener('click', () => showFinishWorkoutModal(sessionId));
   }
 
   // Cancel Workout button
@@ -1179,6 +1179,145 @@ async function handleDeleteExercise(exerciseId) {
   }
 }
 
+// ===== MODAL HELPERS =====
+
+function closeModal() {
+  const overlay = document.getElementById('modal-overlay');
+  if (overlay) overlay.remove();
+  document.removeEventListener('keydown', handleModalKeydown);
+}
+
+function handleModalKeydown(event) {
+  if (event.key === 'Escape') closeModal();
+}
+
+// Build and show the finish-workout confirmation modal with a summary
+async function showFinishWorkoutModal(sessionId) {
+  const program = state.activeProgram;
+  const session = state.activeWorkout;
+
+  // Fallback: if we can't build a summary, finish directly
+  if (!program || !session) {
+    await handleFinishWorkout(sessionId);
+    return;
+  }
+
+  const workoutNumber = session.workoutNumber;
+  const workout = program.workouts
+    ? program.workouts.find(w => w.workoutNumber === workoutNumber)
+    : null;
+  const exercises = workout ? workout.exercises : [];
+
+  const loggedSets = await getSetsForWorkout(sessionId);
+
+  // Build per-exercise completion summary + detect PRs (estimated 1RM)
+  const summary = [];
+  const prs = [];
+  for (const ex of exercises) {
+    const exercise = state.exercises.find(e => e.id === ex.exerciseId);
+    const name = exercise ? exercise.name : 'Unknown';
+    const target = ex.targetSets || 0;
+    const exSets = loggedSets.filter(s => s.exerciseId === ex.exerciseId);
+    const done = exSets.length;
+    summary.push({ name, target, done, complete: target > 0 && done >= target });
+
+    if (exSets.length > 0) {
+      const history = await getExerciseHistory(ex.exerciseId);
+      const priorBest = Math.max(0, ...history
+        .filter(s => s.workoutSessionId !== sessionId)
+        .map(s => calcE1RM(s.weight, s.reps)));
+      let sessionBest = 0;
+      let bestSet = null;
+      exSets.forEach(s => {
+        const e = calcE1RM(s.weight, s.reps);
+        if (e > sessionBest) { sessionBest = e; bestSet = s; }
+      });
+      if (sessionBest > priorBest && sessionBest > 0) {
+        prs.push({ name, e1rm: Math.round(sessionBest), weight: bestSet.weight, reps: bestSet.reps });
+      }
+    }
+  }
+
+  const totalTarget = summary.reduce((a, s) => a + s.target, 0);
+  const totalDone = summary.reduce((a, s) => a + s.done, 0);
+  const completed = summary.filter(s => s.complete);
+  const incomplete = summary.filter(s => !s.complete);
+
+  const checkIcon = '<svg class="status-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>';
+  const partialIcon = '<svg class="status-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>';
+
+  let bodyHtml = `
+    <p class="modal-summary-line">${totalDone} of ${totalTarget} target sets logged across ${summary.length} exercise${summary.length === 1 ? '' : 's'}.</p>
+  `;
+
+  if (prs.length > 0) {
+    bodyHtml += `
+      <div class="modal-section modal-pr-section">
+        <h4>🎉 New PR${prs.length === 1 ? '' : 's'}!</h4>
+        <ul class="modal-status-list">
+    `;
+    prs.forEach(pr => {
+      bodyHtml += `<li class="status-item pr"><span class="status-name">${pr.name}</span><span class="status-detail">${pr.weight}kg × ${pr.reps} · est. 1RM ${pr.e1rm}kg</span></li>`;
+    });
+    bodyHtml += '</ul></div>';
+  }
+
+  if (completed.length > 0) {
+    bodyHtml += `
+      <div class="modal-section">
+        <h4>Completed</h4>
+        <ul class="modal-status-list">
+    `;
+    completed.forEach(s => {
+      bodyHtml += `<li class="status-item complete">${checkIcon}<span class="status-name">${s.name}</span><span class="status-detail">${s.done}/${s.target} sets</span></li>`;
+    });
+    bodyHtml += '</ul></div>';
+  }
+
+  if (incomplete.length > 0) {
+    bodyHtml += `
+      <div class="modal-section">
+        <h4>Not completed</h4>
+        <ul class="modal-status-list">
+    `;
+    incomplete.forEach(s => {
+      const detail = s.target > 0 ? `${s.done} of ${s.target} sets` : `${s.done} sets`;
+      bodyHtml += `<li class="status-item incomplete">${partialIcon}<span class="status-name">${s.name}</span><span class="status-detail">${detail}</span></li>`;
+    });
+    bodyHtml += '</ul></div>';
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <h3 id="modal-title">Finish Workout?</h3>
+        <p class="modal-subtitle">${program.name} • Workout ${workoutNumber}</p>
+      </div>
+      <div class="modal-body">
+        ${bodyHtml}
+      </div>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn-primary">Confirm &amp; Finish</button>
+        <button id="modal-cancel-btn" class="btn-secondary">Keep Going</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeModal();
+  });
+  document.addEventListener('keydown', handleModalKeydown);
+  document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+  document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
+    closeModal();
+    await handleFinishWorkout(sessionId);
+  });
+}
+
 async function handleFinishWorkout(sessionId) {
   try {
     // Mark session as complete
@@ -1190,8 +1329,6 @@ async function handleFinishWorkout(sessionId) {
     // Reload state
     await loadActiveWorkout();
     await loadActiveProgram();
-
-    alert('Workout completed! Great job!');
   } catch (error) {
     console.error('Failed to finish workout:', error);
     alert('Failed to finish workout. Please try again.');
