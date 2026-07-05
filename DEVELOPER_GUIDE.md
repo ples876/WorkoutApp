@@ -37,12 +37,14 @@ WorkoutApp/
 
 ## Database Schema (IndexedDB via Dexie.js)
 
-### Current Version: 3
+### Current Version: 5
 
 **Version History:**
 - v1: Initial schema (exercises, programs, workoutSessions, sets)
 - v2: Added `notes` field to exercises
 - v3: Added `completedCycles` field to programs
+- v4: Seeded Abs exercises (Machine Crunch, Leg Raise) into existing databases
+- v5: Added `swaps` field to workoutSessions (per-session temporary exercise substitutions; the UI that uses it is currently deferred)
 
 ### Tables
 
@@ -89,7 +91,8 @@ Actual workout instances (reality, not template)
   programId: number,       // References programs.id
   workoutNumber: number,   // Which workout in the program
   date: string,            // ISO timestamp
-  isComplete: boolean      // false during workout, true when finished
+  isComplete: boolean,     // false during workout, true when finished
+  swaps: object            // v5+: { [slotIndex]: exerciseId } temporary substitutions
 }
 ```
 
@@ -336,9 +339,9 @@ State Update → notifyListeners() → UI Re-render
 ## Common Tasks
 
 ### Adding a New Field to Exercises
-1. **Update schema** in `js/db.js`:
+1. **Update schema** in `js/db.js` with the next version number (currently v5, so add v6):
    ```javascript
-   db.version(4).stores({ ... }).upgrade(tx => {
+   db.version(6).stores({ ... }).upgrade(tx => {
      return tx.table('exercises').toCollection().modify(exercise => {
        exercise.newField = defaultValue;
      });
