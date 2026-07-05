@@ -53,6 +53,19 @@ db.version(4).stores({
   }
 });
 
+// Version 5: Add per-session exercise swaps (temporary substitutions)
+db.version(5).stores({
+  exercises: '++id, name, muscleGroup, isCustom',
+  programs: '++id, name, isActive',
+  workoutSessions: '++id, programId, workoutNumber, date, isComplete',
+  sets: '++id, workoutSessionId, exerciseId, weight, reps, timestamp'
+}).upgrade(tx => {
+  // Backfill an empty swaps map on existing sessions (slot index -> exerciseId)
+  return tx.table('workoutSessions').toCollection().modify(session => {
+    session.swaps = session.swaps || {};
+  });
+});
+
 // Database initialization
 async function initDatabase() {
   try {
