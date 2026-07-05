@@ -526,16 +526,17 @@ async function renderActiveWorkout() {
 
   if (!activeSession) {
     // No active session - show preview and Start button
-    renderWorkoutPreview(container, program, currentWorkoutNumber, workout);
+    await renderWorkoutPreview(container, program, currentWorkoutNumber, workout);
   } else {
     // Active session exists - show logging interface
     await renderWorkoutLogging(container, program, currentWorkoutNumber, workout, activeSession);
   }
 }
 
-function renderWorkoutPreview(container, program, workoutNumber, workout) {
+async function renderWorkoutPreview(container, program, workoutNumber, workout) {
   const totalWorkouts = program.workouts ? program.workouts.length : 0;
   const currentCycle = (program.completedCycles || 0) + 1;
+  const lastCompleted = await getLastCompletedSession(program.id);
 
   let html = `
     <div class="active-workout">
@@ -561,6 +562,15 @@ function renderWorkoutPreview(container, program, workoutNumber, workout) {
   html += `
       </div>
       <button id="start-workout-btn" class="btn-primary">Start Workout</button>
+  `;
+
+  if (lastCompleted) {
+    html += `
+      <button id="reopen-workout-btn" class="btn-link-rewind" data-workout-number="${lastCompleted.workoutNumber}">↩ Reopen previous workout (Workout ${lastCompleted.workoutNumber})</button>
+    `;
+  }
+
+  html += `
     </div>
   `;
 
@@ -831,6 +841,11 @@ function setupWorkoutPreviewListeners() {
   if (startBtn) {
     startBtn.addEventListener('click', handleStartWorkout);
   }
+
+  const reopenBtn = document.getElementById('reopen-workout-btn');
+  if (reopenBtn) {
+    reopenBtn.addEventListener('click', handleReopenLastWorkout);
+  }
 }
 
 function setupWorkoutLoggingListeners(sessionId) {
@@ -1064,6 +1079,28 @@ async function handleStartWorkout() {
   } catch (error) {
     console.error('Failed to start workout:', error);
     alert('Failed to start workout. Please try again.');
+  }
+}
+
+async function handleReopenLastWorkout() {
+  const program = state.activeProgram;
+  if (!program) return;
+
+  const last = await getLastCompletedSession(program.id);
+  if (!last) return;
+
+  if (!confirm(`Reopen Workout ${last.workoutNumber}? Your logged sets will be restored so you can edit or finish it again.`)) {
+    return;
+  }
+
+  try {
+    await reopenLastWorkout(program.id);
+    // Reload pointer + active session so the logging screen reappears
+    await loadActiveProgram();
+    await loadActiveWorkout();
+  } catch (error) {
+    console.error('Failed to reopen workout:', error);
+    alert('Failed to reopen workout. Please try again.');
   }
 }
 

@@ -213,6 +213,36 @@ async function completeWorkoutSession(sessionId) {
   return await db.workoutSessions.update(sessionId, { isComplete: true });
 }
 
+async function getLastCompletedSession(programId) {
+  const sessions = await db.workoutSessions.where('programId').equals(programId).toArray();
+  const completed = sessions
+    .filter(s => s.isComplete === true)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  return completed.length > 0 ? completed[0] : null;
+}
+
+// Reopen the most recently completed session for a program: flip it back to
+// in-progress (sets are preserved) and reverse the workout-pointer advance.
+async function reopenLastWorkout(programId) {
+  const last = await getLastCompletedSession(programId);
+  if (!last) return null;
+
+  // Restore the session to in-progress
+  await db.workoutSessions.update(last.id, { isComplete: false });
+
+  // Reverse advanceWorkout: point back to this session's workout, and undo the
+  // cycle increment if finishing it had wrapped the cycle.
+  const program = await db.programs.get(programId);
+  const totalWorkouts = program.workouts ? program.workouts.length : 0;
+  const updates = { currentWorkout: last.workoutNumber };
+  if (last.workoutNumber === totalWorkouts && (program.completedCycles || 0) > 0) {
+    updates.completedCycles = program.completedCycles - 1;
+  }
+  await db.programs.update(programId, updates);
+
+  return last;
+}
+
 async function deleteWorkoutSession(sessionId) {
   // Also delete all sets for this session
   await db.sets.where('workoutSessionId').equals(sessionId).delete();

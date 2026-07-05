@@ -1277,3 +1277,25 @@ h3 {
 .modal-actions .btn-secondary {
   margin-top: 0;
 }
+
+/* Reopen previous workout link */
+.btn-link-rewind {
+  display: block;
+  width: 100%;
+  margin-top: var(--spacing-sm);
+  padding: 0.6rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  border-radius: 0.5rem;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.btn-link-rewind:hover {
+  color: var(--primary-color);
+  background-color: var(--surface);
+}
