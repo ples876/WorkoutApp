@@ -1278,6 +1278,20 @@ h3 {
   margin-top: 0;
 }
 
+.modal-message {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.btn-danger {
+  background-color: #dc2626;
+}
+
+.btn-danger:hover {
+  background-color: #b91c1c;
+}
+
 /* Reopen previous workout link */
 .btn-link-rewind {
   display: block;

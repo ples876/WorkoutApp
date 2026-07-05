@@ -731,7 +731,13 @@ function setupProgramListeners() {
   document.querySelectorAll('.delete-program-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const programId = parseInt(btn.dataset.programId);
-      if (confirm('Are you sure you want to delete this program?')) {
+      const ok = await showConfirmModal({
+        title: 'Delete program?',
+        message: 'This program will be permanently deleted.',
+        confirmLabel: 'Delete',
+        danger: true,
+      });
+      if (ok) {
         await deleteProgram(programId);
         await loadPrograms();
       }
@@ -824,7 +830,13 @@ function setupProgramDetailListeners(programId) {
   const deleteBtn = document.getElementById('delete-program-detail-btn');
   if (deleteBtn) {
     deleteBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to delete this program?')) {
+      const ok = await showConfirmModal({
+        title: 'Delete program?',
+        message: 'This program will be permanently deleted.',
+        confirmLabel: 'Delete',
+        danger: true,
+      });
+      if (ok) {
         await deleteProgram(programId);
         await loadPrograms();
         currentProgramView = 'list';
@@ -1089,9 +1101,12 @@ async function handleReopenLastWorkout() {
   const last = await getLastCompletedSession(program.id);
   if (!last) return;
 
-  if (!confirm(`Reopen Workout ${last.workoutNumber}? Your logged sets will be restored so you can edit or finish it again.`)) {
-    return;
-  }
+  const ok = await showConfirmModal({
+    title: `Reopen Workout ${last.workoutNumber}?`,
+    message: 'Your logged sets will be restored so you can edit or finish it again.',
+    confirmLabel: 'Reopen',
+  });
+  if (!ok) return;
 
   try {
     await reopenLastWorkout(program.id);
@@ -1143,9 +1158,13 @@ async function handleLogSet(sessionId, exerciseId) {
 }
 
 async function handleDeleteSet(setId) {
-  if (!confirm('Delete this set?')) {
-    return;
-  }
+  const ok = await showConfirmModal({
+    title: 'Delete set?',
+    message: 'This logged set will be removed.',
+    confirmLabel: 'Delete',
+    danger: true,
+  });
+  if (!ok) return;
 
   try {
     await deleteSet(setId);
@@ -1198,9 +1217,13 @@ async function handleDeleteExercise(exerciseId) {
   const exercise = state.exercises.find(e => e.id === exerciseId);
   if (!exercise) return;
 
-  if (!confirm(`Delete "${exercise.name}"? This cannot be undone.`)) {
-    return;
-  }
+  const ok = await showConfirmModal({
+    title: `Delete "${exercise.name}"?`,
+    message: 'This cannot be undone.',
+    confirmLabel: 'Delete',
+    danger: true,
+  });
+  if (!ok) return;
 
   try {
     await deleteExercise(exerciseId);
@@ -1226,6 +1249,44 @@ function closeModal() {
 
 function handleModalKeydown(event) {
   if (event.key === 'Escape') closeModal();
+}
+
+// Reusable yes/no confirmation modal. Resolves true on confirm, false on
+// cancel / backdrop / Escape. Replaces native confirm() for important gates.
+function showConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = false }) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.id = 'modal-overlay';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal modal-confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <div class="modal-header">
+          <h3 id="confirm-title">${title}</h3>
+        </div>
+        <div class="modal-body">
+          <p class="modal-message">${message}</p>
+        </div>
+        <div class="modal-actions">
+          <button id="confirm-ok-btn" class="btn-primary${danger ? ' btn-danger' : ''}">${confirmLabel}</button>
+          <button id="confirm-cancel-btn" class="btn-secondary">${cancelLabel}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const onKey = (e) => { if (e.key === 'Escape') finish(false); };
+    function finish(result) {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      resolve(result);
+    }
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) finish(false); });
+    document.addEventListener('keydown', onKey);
+    document.getElementById('confirm-ok-btn').addEventListener('click', () => finish(true));
+    document.getElementById('confirm-cancel-btn').addEventListener('click', () => finish(false));
+    document.getElementById('confirm-ok-btn').focus();
+  });
 }
 
 // Build and show the finish-workout confirmation modal with a summary
@@ -1373,9 +1434,14 @@ async function handleFinishWorkout(sessionId) {
 }
 
 async function handleCancelWorkout(sessionId) {
-  if (!confirm('Cancel this workout? All logged sets will be deleted.')) {
-    return;
-  }
+  const ok = await showConfirmModal({
+    title: 'Cancel workout?',
+    message: 'All logged sets for this workout will be deleted.',
+    confirmLabel: 'Cancel workout',
+    cancelLabel: 'Keep going',
+    danger: true,
+  });
+  if (!ok) return;
 
   try {
     // Delete session and all sets
@@ -1451,18 +1517,17 @@ async function handleImportData(event) {
 
       // Show preview of what will be imported
       const { exercises, programs, workoutSessions, sets } = importedData.data;
-      const preview = `
-Import Preview:
-- ${exercises?.length || 0} exercises
-- ${programs?.length || 0} programs
-- ${workoutSessions?.length || 0} workout sessions
-- ${sets?.length || 0} sets
+      const ok = await showConfirmModal({
+        title: 'Import data?',
+        message: `This will <strong>delete all existing data</strong> and replace it with:<br>` +
+          `${exercises?.length || 0} exercises · ${programs?.length || 0} programs · ` +
+          `${workoutSessions?.length || 0} sessions · ${sets?.length || 0} sets.<br><br>` +
+          `This cannot be undone.`,
+        confirmLabel: 'Replace all data',
+        danger: true,
+      });
 
-WARNING: This will delete ALL existing data and replace it with the imported data.
-
-Do you want to continue?`;
-
-      if (!confirm(preview)) {
+      if (!ok) {
         // Reset file input
         event.target.value = '';
         return;
@@ -1501,9 +1566,12 @@ async function handleStartProgram(programId) {
     const newProgram = state.programs.find(p => p.id === programId);
     const newProgramName = newProgram ? newProgram.name : 'this program';
 
-    if (!confirm(`You're currently following "${currentProgramName}". Switch to "${newProgramName}"?`)) {
-      return;
-    }
+    const ok = await showConfirmModal({
+      title: 'Switch program?',
+      message: `You're currently following "${currentProgramName}". Switch to "${newProgramName}"?`,
+      confirmLabel: 'Switch',
+    });
+    if (!ok) return;
   }
 
   await setActiveProgram(programId);
