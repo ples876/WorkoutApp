@@ -417,8 +417,8 @@ function renderWorkoutExercises(exercises) {
     html += `
       <div class="exercise-entry" data-index="${index}">
         <div class="exercise-entry-info">
-          <span class="exercise-name">${exerciseName}</span>
-          <span class="exercise-sets">${ex.targetSets} sets</span>
+          <span class="exercise-name editable-field" title="Tap to change exercise">${exerciseName}</span>
+          <span class="exercise-sets editable-field" title="Tap to change sets">${ex.targetSets} sets</span>
         </div>
         <div class="exercise-entry-actions">
           <button class="btn-move-exercise" data-index="${index}" data-direction="up" ${isFirst ? 'disabled' : ''}>↑</button>
@@ -542,8 +542,16 @@ async function renderActiveWorkout() {
   }
 }
 
+// Highest workout number in a program. Used for the "Workout X of Y" label:
+// workout numbers are stable slot ids and can have gaps, so the count would
+// read wrong (e.g. "Workout 3 of 2") for a program whose workouts are [1, 3].
+function getLastWorkoutNumber(program) {
+  const numbers = getWorkoutNumbers(program);
+  return numbers.length > 0 ? numbers[numbers.length - 1] : 0;
+}
+
 async function renderWorkoutPreview(container, program, workoutNumber, workout) {
-  const totalWorkouts = program.workouts ? program.workouts.length : 0;
+  const totalWorkouts = getLastWorkoutNumber(program);
   const currentCycle = (program.completedCycles || 0) + 1;
   const lastCompleted = await getLastCompletedSession(program.id);
 
@@ -615,7 +623,7 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
   // Get last completed workout for reference
   const lastWorkout = await getLastCompletedWorkout(program.id, workoutNumber);
 
-  const totalWorkouts = program.workouts ? program.workouts.length : 0;
+  const totalWorkouts = getLastWorkoutNumber(program);
   const currentCycle = (program.completedCycles || 0) + 1;
 
   let html = `
@@ -740,8 +748,10 @@ function setupProgramListeners() {
 
   // Edit buttons
   document.querySelectorAll('.edit-program-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentProgramId = parseInt(btn.dataset.programId);
+    btn.addEventListener('click', async () => {
+      const programId = parseInt(btn.dataset.programId);
+      if (!await canEditProgram(programId)) return;
+      currentProgramId = programId;
       currentProgramView = 'edit';
       copySourceProgramId = null;
       renderPrograms();
@@ -808,18 +818,55 @@ function setupProgramFormListeners(programId) {
     });
   });
 
-  // Remove exercise buttons and move exercise buttons (use event delegation)
+  // Remove/move buttons and inline editing (use event delegation)
   document.querySelectorAll('.workout-exercises').forEach(container => {
+    const entryIndex = (target) => {
+      const entry = target.closest('.exercise-entry');
+      return entry ? parseInt(entry.dataset.index) : -1;
+    };
+
     container.addEventListener('click', (e) => {
+      const workoutNumber = parseInt(container.dataset.workout);
+
       if (e.target.classList.contains('btn-remove-exercise')) {
-        const workoutNumber = parseInt(container.dataset.workout);
         const index = parseInt(e.target.dataset.index);
         handleRemoveExerciseFromWorkout(workoutNumber, index);
       } else if (e.target.classList.contains('btn-move-exercise')) {
-        const workoutNumber = parseInt(container.dataset.workout);
         const index = parseInt(e.target.dataset.index);
         const direction = e.target.dataset.direction;
         handleMoveExercise(workoutNumber, index, direction);
+      } else if (e.target.classList.contains('exercise-name')) {
+        const index = entryIndex(e.target);
+        if (index > -1) startEditExerciseName(workoutNumber, index);
+      } else if (e.target.classList.contains('exercise-sets')) {
+        const index = entryIndex(e.target);
+        if (index > -1) startEditExerciseSets(workoutNumber, index);
+      }
+    });
+
+    // Commit an inline edit. change bubbles (blur does not), so delegate it.
+    container.addEventListener('change', (e) => {
+      const workoutNumber = parseInt(container.dataset.workout);
+      const index = entryIndex(e.target);
+      if (index === -1 || !workoutData[workoutNumber] || !workoutData[workoutNumber][index]) return;
+
+      if (e.target.classList.contains('inline-exercise-select')) {
+        const exerciseId = parseInt(e.target.value);
+        if (exerciseId) workoutData[workoutNumber][index].exerciseId = exerciseId;
+        rerenderWorkoutExercises(workoutNumber);
+      } else if (e.target.classList.contains('inline-sets-input')) {
+        const targetSets = parseInt(e.target.value);
+        if (targetSets >= 1 && targetSets <= 10) workoutData[workoutNumber][index].targetSets = targetSets;
+        rerenderWorkoutExercises(workoutNumber);
+      }
+    });
+
+    // Leaving an editor without committing restores the plain label
+    container.addEventListener('focusout', (e) => {
+      if (!e.target.isConnected) return; // already replaced by the change handler
+      if (e.target.classList.contains('inline-exercise-select') ||
+          e.target.classList.contains('inline-sets-input')) {
+        rerenderWorkoutExercises(parseInt(container.dataset.workout));
       }
     });
   });
@@ -844,7 +891,8 @@ function setupProgramDetailListeners(programId) {
 
   const editBtn = document.getElementById('edit-program-detail-btn');
   if (editBtn) {
-    editBtn.addEventListener('click', () => {
+    editBtn.addEventListener('click', async () => {
+      if (!await canEditProgram(programId)) return;
       currentProgramView = 'edit';
       renderPrograms();
     });
@@ -1276,6 +1324,7 @@ function handleModalKeydown(event) {
 
 // Reusable yes/no confirmation modal. Resolves true on confirm, false on
 // cancel / backdrop / Escape. Replaces native confirm() for important gates.
+// Pass cancelLabel: null for a single-button informational dialog.
 function showConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = false }) {
   return new Promise(resolve => {
     const overlay = document.createElement('div');
@@ -1291,7 +1340,7 @@ function showConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabe
         </div>
         <div class="modal-actions">
           <button id="confirm-ok-btn" class="btn-primary${danger ? ' btn-danger' : ''}">${confirmLabel}</button>
-          <button id="confirm-cancel-btn" class="btn-secondary">${cancelLabel}</button>
+          ${cancelLabel ? `<button id="confirm-cancel-btn" class="btn-secondary">${cancelLabel}</button>` : ''}
         </div>
       </div>
     `;
@@ -1307,7 +1356,8 @@ function showConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabe
     overlay.addEventListener('click', (e) => { if (e.target === overlay) finish(false); });
     document.addEventListener('keydown', onKey);
     document.getElementById('confirm-ok-btn').addEventListener('click', () => finish(true));
-    document.getElementById('confirm-cancel-btn').addEventListener('click', () => finish(false));
+    const cancelBtn = document.getElementById('confirm-cancel-btn');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => finish(false));
     document.getElementById('confirm-ok-btn').focus();
   });
 }
@@ -1582,6 +1632,22 @@ async function handleImportData(event) {
 
 // ===== PROGRAM ACTION HANDLERS =====
 
+// A live session is rendered from its program's template, so editing that
+// template mid-workout would change the session underneath the user. Block it
+// until the workout is finished or cancelled. Returns true if editing is safe.
+async function canEditProgram(programId) {
+  const isActiveProgram = state.activeProgram && state.activeProgram.id === programId;
+  if (!state.activeWorkout || !isActiveProgram) return true;
+
+  await showConfirmModal({
+    title: 'Workout in progress',
+    message: 'You have a workout in progress for this program. Finish or cancel it first, then you can edit the program.',
+    confirmLabel: 'Got it',
+    cancelLabel: null,
+  });
+  return false;
+}
+
 async function handleStartProgram(programId) {
   // Check if another program is active
   if (state.activeProgram && state.activeProgram.id !== programId) {
@@ -1613,29 +1679,15 @@ async function handleSaveProgram(programId) {
     return;
   }
 
-  // Collect workouts data
+  // Collect workouts from workoutData, which every mutation (add / remove /
+  // move / inline edit) writes to. The rendered list is a projection of it, and
+  // may hold a transient inline editor instead of a label mid-edit.
   const workouts = [];
 
   for (let i = 1; i <= 7; i++) {
-    const container = document.querySelector(`.workout-exercises[data-workout="${i}"]`);
-    if (!container) continue;
-
-    const exerciseEntries = container.querySelectorAll('.exercise-entry');
-    if (exerciseEntries.length === 0) continue;
-
-    const exercises = [];
-    exerciseEntries.forEach(entry => {
-      // Find exercise ID from the rendered name
-      const exerciseName = entry.querySelector('.exercise-name').textContent;
-      const exercise = state.exercises.find(e => e.name === exerciseName);
-
-      if (exercise) {
-        exercises.push({
-          exerciseId: exercise.id,
-          targetSets: parseInt(entry.querySelector('.exercise-sets').textContent.split(' ')[0])
-        });
-      }
-    });
+    const exercises = (workoutData[i] || [])
+      .filter(ex => ex && ex.exerciseId && ex.targetSets > 0)
+      .map(ex => ({ exerciseId: ex.exerciseId, targetSets: ex.targetSets }));
 
     if (exercises.length > 0) {
       workouts.push({
@@ -1645,23 +1697,34 @@ async function handleSaveProgram(programId) {
     }
   }
 
-  const programData = {
-    name,
-    workouts,
-    isActive: false,
-    currentWorkout: 1
-  };
-
   try {
     if (programId) {
-      // Edit existing
-      await updateProgram(programId, programData);
+      // Edit existing. Only the template changes here - isActive, completedCycles
+      // and the user's place in the cycle must survive the edit.
+      const updates = { name, workouts };
+      // Read the pointer from the DB - state.programs can lag behind it
+      // (finishing a workout advances currentWorkout without reloading the list).
+      const existing = await getProgramById(programId);
+      const numbers = workouts.map(w => w.workoutNumber).sort((a, b) => a - b);
+
+      if (existing && numbers.length > 0) {
+        const current = existing.currentWorkout || numbers[0];
+        if (!numbers.includes(current)) {
+          // The workout they were on was edited away: move to the next one
+          // that still exists, wrapping to the first if none follow it.
+          const nextExisting = numbers.find(n => n > current);
+          updates.currentWorkout = nextExisting !== undefined ? nextExisting : numbers[0];
+        }
+      }
+
+      await updateProgram(programId, updates);
     } else {
       // Create new
-      await createProgram(programData);
+      await createProgram({ name, workouts, isActive: false, currentWorkout: 1 });
     }
 
     await loadPrograms();
+    await loadActiveProgram(); // pick up edits to the active program right away
     currentProgramView = 'list';
     currentProgramId = null;
     copySourceProgramId = null;
@@ -1673,6 +1736,54 @@ async function handleSaveProgram(programId) {
 
 // Track workout data while building the form
 const workoutData = {};
+
+// Re-render one workout's exercise list from workoutData. Listeners survive
+// because the form uses event delegation on the .workout-exercises container.
+function rerenderWorkoutExercises(workoutNumber) {
+  const container = document.querySelector(`.workout-exercises[data-workout="${workoutNumber}"]`);
+  if (container) {
+    container.innerHTML = renderWorkoutExercises(workoutData[workoutNumber] || []);
+  }
+}
+
+// Swap the exercise name label for a dropdown so it can be changed in place
+function startEditExerciseName(workoutNumber, index) {
+  const entry = workoutData[workoutNumber] && workoutData[workoutNumber][index];
+  if (!entry) return;
+
+  const span = document.querySelector(
+    `.workout-exercises[data-workout="${workoutNumber}"] .exercise-entry[data-index="${index}"] .exercise-name`
+  );
+  if (!span) return;
+
+  const select = document.createElement('select');
+  select.className = 'inline-exercise-select';
+  select.innerHTML = renderExerciseOptions();
+  select.value = String(entry.exerciseId);
+  span.replaceWith(select);
+  select.focus();
+}
+
+// Swap the sets label for a number input so it can be changed in place
+function startEditExerciseSets(workoutNumber, index) {
+  const entry = workoutData[workoutNumber] && workoutData[workoutNumber][index];
+  if (!entry) return;
+
+  const span = document.querySelector(
+    `.workout-exercises[data-workout="${workoutNumber}"] .exercise-entry[data-index="${index}"] .exercise-sets`
+  );
+  if (!span) return;
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.className = 'inline-sets-input';
+  input.min = '1';
+  input.max = '10';
+  input.value = String(entry.targetSets);
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+}
 
 function handleAddExerciseToWorkout(workoutNumber) {
   const dropdown = document.querySelector(`.exercise-dropdown[data-workout="${workoutNumber}"]`);
@@ -1694,16 +1805,11 @@ function handleAddExerciseToWorkout(workoutNumber) {
   // Add exercise to workout
   workoutData[workoutNumber].push({ exerciseId, targetSets });
 
-  // Re-render just this workout's exercises
-  const container = document.querySelector(`.workout-exercises[data-workout="${workoutNumber}"]`);
-  container.innerHTML = renderWorkoutExercises(workoutData[workoutNumber]);
+  rerenderWorkoutExercises(workoutNumber);
 
   // Reset inputs
   dropdown.value = '';
   setsInput.value = '3';
-
-  // Note: Event listeners are already set up via event delegation in setupProgramFormListeners
-  // No need to re-attach listeners here
 }
 
 function handleRemoveExerciseFromWorkout(workoutNumber, index) {
@@ -1711,9 +1817,7 @@ function handleRemoveExerciseFromWorkout(workoutNumber, index) {
 
   workoutData[workoutNumber].splice(index, 1);
 
-  // Re-render
-  const container = document.querySelector(`.workout-exercises[data-workout="${workoutNumber}"]`);
-  container.innerHTML = renderWorkoutExercises(workoutData[workoutNumber]);
+  rerenderWorkoutExercises(workoutNumber);
 }
 
 function handleMoveExercise(workoutNumber, index, direction) {
@@ -1728,9 +1832,7 @@ function handleMoveExercise(workoutNumber, index, direction) {
   // Swap exercises
   [exercises[index], exercises[newIndex]] = [exercises[newIndex], exercises[index]];
 
-  // Re-render
-  const container = document.querySelector(`.workout-exercises[data-workout="${workoutNumber}"]`);
-  container.innerHTML = renderWorkoutExercises(workoutData[workoutNumber]);
+  rerenderWorkoutExercises(workoutNumber);
 }
 
 // ===== SETTINGS RENDERING =====

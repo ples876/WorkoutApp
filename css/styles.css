@@ -1284,6 +1284,33 @@ h3 {
   line-height: 1.5;
 }
 
+/* Inline editing in the program builder */
+.exercise-entry .editable-field {
+  cursor: pointer;
+  border-bottom: 1px dashed var(--border);
+}
+
+.exercise-entry .editable-field:hover {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.inline-exercise-select,
+.inline-sets-input {
+  font-family: inherit;
+  font-size: 0.875rem;
+  padding: 0.2rem 0.3rem;
+  border: 1px solid var(--primary-color);
+  border-radius: 0.25rem;
+  background-color: var(--background);
+  color: var(--text-primary);
+  max-width: 100%;
+}
+
+.inline-sets-input {
+  width: 4.5rem;
+}
+
 .btn-danger {
   background-color: #dc2626;
 }

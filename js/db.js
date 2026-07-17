@@ -181,24 +181,42 @@ async function setActiveProgram(programId) {
   });
 }
 
+// The workout numbers a program actually has, in order. Numbers are stable
+// slot identifiers (sessions reference them), so they can have gaps if a
+// middle workout was emptied out during an edit - never assume 1..N.
+function getWorkoutNumbers(program) {
+  return (program && program.workouts ? program.workouts : [])
+    .map(w => w.workoutNumber)
+    .sort((a, b) => a - b);
+}
+
 async function advanceWorkout(programId) {
   const program = await db.programs.get(programId);
   if (!program) return;
 
-  const totalWorkouts = program.workouts ? program.workouts.length : 0;
-  if (totalWorkouts === 0) return;
+  const numbers = getWorkoutNumbers(program);
+  if (numbers.length === 0) return;
 
-  const currentWorkout = program.currentWorkout || 1;
+  const currentWorkout = program.currentWorkout || numbers[0];
+  const index = numbers.indexOf(currentWorkout);
 
-  // Check if we're completing the last workout
-  const isLastWorkout = currentWorkout >= totalWorkouts;
+  let nextWorkout;
+  let completedCycle;
 
-  // Advance to next workout, loop back to 1 if at the end
-  const nextWorkout = isLastWorkout ? 1 : currentWorkout + 1;
+  if (index === -1) {
+    // Pointer sits on a workout that no longer exists (edited away): resume at
+    // the next one that does, or wrap and count the cycle if none follow it.
+    const nextExisting = numbers.find(n => n > currentWorkout);
+    nextWorkout = nextExisting !== undefined ? nextExisting : numbers[0];
+    completedCycle = nextExisting === undefined;
+  } else {
+    const isLastWorkout = index === numbers.length - 1;
+    nextWorkout = isLastWorkout ? numbers[0] : numbers[index + 1];
+    completedCycle = isLastWorkout;
+  }
 
-  // If completing the cycle, increment completedCycles
   const updates = { currentWorkout: nextWorkout };
-  if (isLastWorkout) {
+  if (completedCycle) {
     updates.completedCycles = (program.completedCycles || 0) + 1;
   }
 
@@ -246,9 +264,10 @@ async function reopenLastWorkout(programId) {
   // Reverse advanceWorkout: point back to this session's workout, and undo the
   // cycle increment if finishing it had wrapped the cycle.
   const program = await db.programs.get(programId);
-  const totalWorkouts = program.workouts ? program.workouts.length : 0;
+  const numbers = getWorkoutNumbers(program);
+  const lastWorkoutNumber = numbers.length > 0 ? numbers[numbers.length - 1] : 0;
   const updates = { currentWorkout: last.workoutNumber };
-  if (last.workoutNumber === totalWorkouts && (program.completedCycles || 0) > 0) {
+  if (last.workoutNumber === lastWorkoutNumber && (program.completedCycles || 0) > 0) {
     updates.completedCycles = program.completedCycles - 1;
   }
   await db.programs.update(programId, updates);
