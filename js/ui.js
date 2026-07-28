@@ -121,7 +121,7 @@ async function renderExerciseHistory(exerciseId) {
           <p class="session-date">${date}</p>
         </div>
         <div class="session-sets">
-          <p>${sets.length} sets @ ${formattedSets}</p>
+          <p>${sets.length} sets: ${formattedSets}</p>
         </div>
       </div>
     `;
@@ -603,7 +603,9 @@ function formatLastTime(sets) {
     if (!byWeight[key]) {
       byWeight[key] = [];
     }
-    byWeight[key].push(set.reps);
+    // "5@8" = 5 reps at RPE 8, the usual lifting shorthand. Sets logged
+    // without an RPE keep the bare rep count.
+    byWeight[key].push(set.rpe ? `${set.reps}@${set.rpe}` : `${set.reps}`);
   });
 
   // Format each weight group
@@ -689,7 +691,7 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
         html += `
           <div class="logged-set" data-set-id="${set.id}">
             <span class="set-number">Set ${index + 1}:</span>
-            <span class="set-data">${set.weight}kg × ${set.reps} reps</span>
+            <span class="set-data">${set.weight}kg × ${set.reps} reps${set.rpe ? ` (RPE ${set.rpe})` : ''}</span>
             <div class="set-actions">
               <button class="btn-delete-set" data-set-id="${set.id}">Delete</button>
             </div>
@@ -1203,13 +1205,30 @@ async function handleLogSet(sessionId, exerciseId) {
   }
 
   try {
-    await logSet(sessionId, exerciseId, weight, reps);
+    const setId = await logSet(sessionId, exerciseId, weight, reps);
 
     // Keep the weight, clear only reps
     repsInput.value = '';
 
+    // Drop the soft keyboard so it cannot cover the RPE prompt
+    weightInput.blur();
+    repsInput.blur();
+
     // Re-render to show new set
     await renderActiveWorkout();
+
+    // Ask for RPE only after the set is safely logged, so a dismissed
+    // prompt can never lose it.
+    const exercise = state.exercises.find(e => e.id === exerciseId);
+    const rpe = await showRpeModal({
+      exerciseName: exercise ? exercise.name : 'Set',
+      weight,
+      reps
+    });
+    if (rpe !== null) {
+      await updateSetRpe(setId, rpe);
+      await renderActiveWorkout();
+    }
 
     // After re-render, restore the weight value and focus on reps
     setTimeout(() => {
@@ -1359,6 +1378,50 @@ function showConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabe
     const cancelBtn = document.getElementById('confirm-cancel-btn');
     if (cancelBtn) cancelBtn.addEventListener('click', () => finish(false));
     document.getElementById('confirm-ok-btn').focus();
+  });
+}
+
+// RPE 6-10 in half steps. Below 6 is not reliably estimable, so it is not offered.
+const RPE_VALUES = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
+
+// Post-log RPE prompt. Tapping a value is itself the confirmation - there is no
+// OK button. Skip / backdrop / Escape all resolve null, leaving the set as-is.
+function showRpeModal({ exerciseName, weight, reps }) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.id = 'modal-overlay';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal modal-rpe" role="dialog" aria-modal="true" aria-labelledby="rpe-title">
+        <div class="modal-header">
+          <h3 id="rpe-title">How hard was that set?</h3>
+        </div>
+        <div class="modal-body">
+          <p class="rpe-set-summary">${exerciseName} &middot; ${weight}kg &times; ${reps} reps</p>
+          <div class="rpe-grid">
+            ${RPE_VALUES.map(v => `<button class="rpe-btn" data-rpe="${v}">${v}</button>`).join('')}
+            <button class="rpe-btn rpe-skip" data-rpe="">Skip</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const onKey = (e) => { if (e.key === 'Escape') finish(null); };
+    function finish(result) {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      resolve(result);
+    }
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) finish(null); });
+    document.addEventListener('keydown', onKey);
+    // Delegation: one listener for all ten buttons
+    overlay.querySelector('.rpe-grid').addEventListener('click', (e) => {
+      const btn = e.target.closest('.rpe-btn');
+      if (!btn) return;
+      finish(btn.dataset.rpe ? parseFloat(btn.dataset.rpe) : null);
+    });
   });
 }
 

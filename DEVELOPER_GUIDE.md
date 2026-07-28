@@ -105,6 +105,7 @@ Individual logged sets
   exerciseId: number,      // References exercises.id
   weight: number,          // In kg (0 for bodyweight)
   reps: number,            // Repetitions performed
+  rpe: number,             // Optional. 6-10 in half steps; absent if skipped
   timestamp: string        // ISO timestamp
 }
 ```
@@ -162,6 +163,10 @@ state = {
 **Smart Features**:
 - **Weight Persistence**: After logging first set, weight stays pre-filled
 - **Auto-focus**: Reps input gets focus after logging
+- **RPE Prompt**: After each set is logged, `showRpeModal()` asks for its RPE
+  (6-10 in half steps). One tap records it; Skip / backdrop / Escape leave the
+  set without an RPE. The set is written first, so a dismissed prompt never
+  loses it.
 - **Last Time Reference**: Shows previous workout data (grouped by weight)
 - **Delete Sets**: Remove logged sets before finishing workout
 

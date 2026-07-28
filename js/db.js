@@ -313,6 +313,13 @@ async function updateSet(setId, weight, reps) {
   });
 }
 
+// RPE is written after the set is logged, so it is a separate update.
+// It is not an indexed field, so no schema version bump is needed; sets
+// logged before RPE existed simply have no `rpe` property.
+async function updateSetRpe(setId, rpe) {
+  return await db.sets.update(setId, { rpe });
+}
+
 async function getLastCompletedWorkout(programId, workoutNumber) {
   // Get all completed sessions for this program and workout number
   const sessions = await db.workoutSessions
