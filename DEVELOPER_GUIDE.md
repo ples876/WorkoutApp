@@ -175,11 +175,31 @@ state = {
 - `renderWorkoutPreview()` - Preview mode
 - `renderWorkoutLogging()` - Logging mode
 - `handleLogSet()` - Log set with weight persistence
-- `formatLastTime(sets)` - Format historical data
+- `fmtSetsSummary(sets)` - Format historical data (see Display Formatting)
 
 **Example "Last Time" Display**:
-- Same weight: `5kg × 10, 9, 9, 9 reps`
-- Multiple weights: `5kg × 10, 9 reps and 4kg × 12, 11 reps`
+- Same weight: `Last time: 4 sets - 5x10,9,9,9`
+- Multiple weights: `Last time: 4 sets - 5x10,9 and 4x12,11`
+- With RPE: `Last time: 3 sets - 140x1(8) and 120x3(8),3(9)`
+
+### Display Formatting
+
+**Location**: `js/ui.js`, next to `calcE1RM()`
+
+All set/weight/count strings go through one small set of helpers so the same
+fact reads the same way everywhere. Do not inline new variants.
+
+| Helper | Output |
+|---|---|
+| `fmtWeight(w)` | `100kg` (bodyweight stays `0kg`) |
+| `fmtSet(w, reps, rpe)` | `100kg × 5 (RPE 8)`; RPE omitted if not passed |
+| `fmtSetCount(done, target, label)` | `2/3 sets`, `12/15 target sets`, `2 sets` when target is 0 |
+| `fmtE1RM(value)` | `est. 1RM: 128kg` (rounds) |
+| `fmtSetsCompact(sets)` | `140x1(8) and 120x3(8),3(9)` - grouped by weight, heaviest first |
+| `fmtSetsSummary(sets)` | `3 sets - 140x1(8) and 120x3(8),3(9)` |
+
+Note the two RPE notations are deliberate: parentheses after reps in the
+compact form, spelled out as `(RPE 8)` in the long form.
 
 ### 3. Exercise History
 **Location**: `js/ui.js` (History view)
@@ -191,7 +211,7 @@ state = {
 **Display**:
 - Groups sets by workout session
 - Shows date, program name, workout number
-- Uses `formatLastTime()` for set display
+- Uses `fmtSetsSummary()` for set display, identical to the "Last time" line
 - Back button returns to correct context
 
 **Key Functions**:

@@ -31,6 +31,55 @@ function calcE1RM(weight, reps) {
   return weight / Math.max(0.03, 1.0278 - 0.0278 * reps);
 }
 
+// ===== DISPLAY FORMATTING =====
+// Shared so the same fact reads the same way everywhere. Bodyweight work
+// stays as "0kg" rather than a special case.
+
+function fmtWeight(weight) {
+  return `${weight}kg`;
+}
+
+// Long form for a single set: "100kg × 5", plus " (RPE 8)" when an RPE is
+// passed. Callers that do not care about RPE simply omit it.
+function fmtSet(weight, reps, rpe) {
+  return `${fmtWeight(weight)} × ${reps}${rpe ? ` (RPE ${rpe})` : ''}`;
+}
+
+// "2/3 sets", "12/15 target sets", or "2 sets" when there is no target.
+function fmtSetCount(done, target, label = 'sets') {
+  return target > 0 ? `${done}/${target} ${label}` : `${done} ${label}`;
+}
+
+function fmtE1RM(value) {
+  return `est. 1RM: ${Math.round(value)}kg`;
+}
+
+// Compact per-weight breakdown: "140x1(8) and 120x3(8),3(9)". Sets are
+// grouped by weight, heaviest first; RPE goes in parentheses after the reps.
+function fmtSetsCompact(sets) {
+  const byWeight = {};
+  sets.forEach(set => {
+    const key = set.weight;
+    if (!byWeight[key]) {
+      byWeight[key] = [];
+    }
+    byWeight[key].push(set.rpe ? `${set.reps}(${set.rpe})` : `${set.reps}`);
+  });
+
+  const parts = [];
+  Object.keys(byWeight).sort((a, b) => parseFloat(b) - parseFloat(a)).forEach(weight => {
+    parts.push(`${weight}x${byWeight[weight].join(',')}`);
+  });
+
+  return parts.join(' and ');
+}
+
+// "3 sets - 140x1(8) and 120x3(8),3(9)". Used by both the history list and
+// the "Last time" line so the two read identically.
+function fmtSetsSummary(sets) {
+  return `${sets.length} set${sets.length === 1 ? '' : 's'} - ${fmtSetsCompact(sets)}`;
+}
+
 // ===== EXERCISE RENDERING =====
 
 async function renderExerciseHistory(exerciseId) {
@@ -102,7 +151,7 @@ async function renderExerciseHistory(exerciseId) {
     <div class="exercise-history">
       <div class="history-header">
         <button id="back-from-history-btn" class="btn-back">← Back</button>
-        <h2>${exercise.name}${allTimeBest > 0 ? ` <span class="pr-e1rm">est. 1RM: ${Math.round(allTimeBest)}kg</span>` : ''}</h2>
+        <h2>${exercise.name}${allTimeBest > 0 ? ` <span class="pr-e1rm">${fmtE1RM(allTimeBest)}</span>` : ''}</h2>
       </div>
   `;
 
@@ -112,7 +161,7 @@ async function renderExerciseHistory(exerciseId) {
     const date = new Date(session.date).toLocaleDateString();
     const programName = program ? program.name : 'Unknown Program';
     const workoutNumber = session.workoutNumber;
-    const formattedSets = formatLastTime(sets);
+    const formattedSets = fmtSetsSummary(sets);
 
     html += `
       <div class="history-session">
@@ -121,7 +170,7 @@ async function renderExerciseHistory(exerciseId) {
           <p class="session-date">${date}</p>
         </div>
         <div class="session-sets">
-          <p>${sets.length} sets: ${formattedSets}</p>
+          <p>${formattedSets}</p>
         </div>
       </div>
     `;
@@ -595,28 +644,6 @@ async function renderWorkoutPreview(container, program, workoutNumber, workout) 
   setupWorkoutPreviewListeners();
 }
 
-function formatLastTime(sets) {
-  // Group sets by weight
-  const byWeight = {};
-  sets.forEach(set => {
-    const key = set.weight;
-    if (!byWeight[key]) {
-      byWeight[key] = [];
-    }
-    // "5@8" = 5 reps at RPE 8, the usual lifting shorthand. Sets logged
-    // without an RPE keep the bare rep count.
-    byWeight[key].push(set.rpe ? `${set.reps}@${set.rpe}` : `${set.reps}`);
-  });
-
-  // Format each weight group
-  const parts = [];
-  Object.keys(byWeight).sort((a, b) => parseFloat(b) - parseFloat(a)).forEach(weight => {
-    const reps = byWeight[weight];
-    parts.push(`${weight}x${reps.join(',')}`);
-  });
-
-  return parts.join(' and ');
-}
 
 async function renderWorkoutLogging(container, program, workoutNumber, workout, session) {
   // Get all sets logged for this session
@@ -669,8 +696,7 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
 
     // Show "Last Time" if available
     if (lastTimeSets.length > 0) {
-      const lastTimeText = formatLastTime(lastTimeSets);
-      html += `<p class="last-time">Last time: ${lastTimeSets.length} sets (${lastTimeText})</p>`;
+      html += `<p class="last-time">Last time: ${fmtSetsSummary(lastTimeSets)}</p>`;
     }
 
     // Input row
@@ -691,7 +717,7 @@ async function renderWorkoutLogging(container, program, workoutNumber, workout, 
         html += `
           <div class="logged-set" data-set-id="${set.id}">
             <span class="set-number">Set ${index + 1}:</span>
-            <span class="set-data">${set.weight}kg × ${set.reps} reps${set.rpe ? ` (RPE ${set.rpe})` : ''}</span>
+            <span class="set-data">${fmtSet(set.weight, set.reps, set.rpe)}</span>
             <div class="set-actions">
               <button class="btn-delete-set" data-set-id="${set.id}">Delete</button>
             </div>
@@ -1486,7 +1512,7 @@ async function showFinishWorkoutModal(sessionId) {
   const partialIcon = '<svg class="status-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>';
 
   let bodyHtml = `
-    <p class="modal-summary-line">${totalDone} of ${totalTarget} target sets logged across ${summary.length} exercise${summary.length === 1 ? '' : 's'}.</p>
+    <p class="modal-summary-line">${fmtSetCount(totalDone, totalTarget, 'target sets')} logged across ${summary.length} exercise${summary.length === 1 ? '' : 's'}.</p>
   `;
 
   if (prs.length > 0) {
@@ -1496,7 +1522,7 @@ async function showFinishWorkoutModal(sessionId) {
         <ul class="modal-status-list">
     `;
     prs.forEach(pr => {
-      bodyHtml += `<li class="status-item pr"><span class="status-name">${pr.name}</span><span class="status-detail">${pr.weight}kg × ${pr.reps} · est. 1RM ${pr.e1rm}kg</span></li>`;
+      bodyHtml += `<li class="status-item pr"><span class="status-name">${pr.name}</span><span class="status-detail">${fmtSet(pr.weight, pr.reps)} · ${fmtE1RM(pr.e1rm)}</span></li>`;
     });
     bodyHtml += '</ul></div>';
   }
@@ -1508,7 +1534,7 @@ async function showFinishWorkoutModal(sessionId) {
         <ul class="modal-status-list">
     `;
     completed.forEach(s => {
-      bodyHtml += `<li class="status-item complete">${checkIcon}<span class="status-name">${s.name}</span><span class="status-detail">${s.done}/${s.target} sets</span></li>`;
+      bodyHtml += `<li class="status-item complete">${checkIcon}<span class="status-name">${s.name}</span><span class="status-detail">${fmtSetCount(s.done, s.target)}</span></li>`;
     });
     bodyHtml += '</ul></div>';
   }
@@ -1520,8 +1546,7 @@ async function showFinishWorkoutModal(sessionId) {
         <ul class="modal-status-list">
     `;
     incomplete.forEach(s => {
-      const detail = s.target > 0 ? `${s.done} of ${s.target} sets` : `${s.done} sets`;
-      bodyHtml += `<li class="status-item incomplete">${partialIcon}<span class="status-name">${s.name}</span><span class="status-detail">${detail}</span></li>`;
+      bodyHtml += `<li class="status-item incomplete">${partialIcon}<span class="status-name">${s.name}</span><span class="status-detail">${fmtSetCount(s.done, s.target)}</span></li>`;
     });
     bodyHtml += '</ul></div>';
   }
