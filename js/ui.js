@@ -1205,30 +1205,33 @@ async function handleLogSet(sessionId, exerciseId) {
   }
 
   try {
-    const setId = await logSet(sessionId, exerciseId, weight, reps);
-
-    // Keep the weight, clear only reps
-    repsInput.value = '';
-
     // Drop the soft keyboard so it cannot cover the RPE prompt
     weightInput.blur();
     repsInput.blur();
 
-    // Re-render to show new set
-    await renderActiveWorkout();
-
-    // Ask for RPE only after the set is safely logged, so a dismissed
-    // prompt can never lose it.
+    // Ask for RPE first: dismissing the prompt abandons the set, so nothing
+    // is written until the user picks a value or opts out explicitly.
     const exercise = state.exercises.find(e => e.id === exerciseId);
     const rpe = await showRpeModal({
       exerciseName: exercise ? exercise.name : 'Set',
       weight,
       reps
     });
-    if (rpe !== null) {
-      await updateSetRpe(setId, rpe);
-      await renderActiveWorkout();
+
+    // Backdrop / Escape: leave weight and reps in place so a mistyped
+    // entry can be corrected and logged again.
+    if (rpe === null) {
+      repsInput.focus();
+      return;
     }
+
+    await logSet(sessionId, exerciseId, weight, reps, rpe === 'skip' ? undefined : rpe);
+
+    // Keep the weight, clear only reps
+    repsInput.value = '';
+
+    // Re-render to show new set
+    await renderActiveWorkout();
 
     // After re-render, restore the weight value and focus on reps
     setTimeout(() => {
@@ -1381,11 +1384,13 @@ function showConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabe
   });
 }
 
-// RPE 6-10 in half steps. Below 6 is not reliably estimable, so it is not offered.
-const RPE_VALUES = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
+// Whole RPE values only. Below 6 is not reliably estimable, so it is not offered.
+const RPE_VALUES = [6, 7, 8, 9, 10];
 
-// Post-log RPE prompt. Tapping a value is itself the confirmation - there is no
-// OK button. Skip / backdrop / Escape all resolve null, leaving the set as-is.
+// RPE prompt, shown before the set is written. Tapping a value is itself the
+// confirmation - there is no OK button. Resolves the number tapped, 'skip' to
+// log the set without an RPE, or null on backdrop / Escape, which abandons the
+// set entirely so a mistyped entry can just be corrected.
 function showRpeModal({ exerciseName, weight, reps }) {
   return new Promise(resolve => {
     const overlay = document.createElement('div');
@@ -1400,7 +1405,7 @@ function showRpeModal({ exerciseName, weight, reps }) {
           <p class="rpe-set-summary">${exerciseName} &middot; ${weight}kg &times; ${reps} reps</p>
           <div class="rpe-grid">
             ${RPE_VALUES.map(v => `<button class="rpe-btn" data-rpe="${v}">${v}</button>`).join('')}
-            <button class="rpe-btn rpe-skip" data-rpe="">Skip</button>
+            <button class="rpe-btn rpe-skip" data-rpe="skip">Log without RPE</button>
           </div>
         </div>
       </div>
@@ -1420,7 +1425,7 @@ function showRpeModal({ exerciseName, weight, reps }) {
     overlay.querySelector('.rpe-grid').addEventListener('click', (e) => {
       const btn = e.target.closest('.rpe-btn');
       if (!btn) return;
-      finish(btn.dataset.rpe ? parseFloat(btn.dataset.rpe) : null);
+      finish(btn.dataset.rpe === 'skip' ? 'skip' : parseFloat(btn.dataset.rpe));
     });
   });
 }

@@ -283,14 +283,18 @@ async function deleteWorkoutSession(sessionId) {
 
 // ===== SET OPERATIONS =====
 
-async function logSet(workoutSessionId, exerciseId, weight, reps) {
-  return await db.sets.add({
+async function logSet(workoutSessionId, exerciseId, weight, reps, rpe) {
+  const set = {
     workoutSessionId,
     exerciseId,
     weight,
     reps,
     timestamp: new Date().toISOString()
-  });
+  };
+  // Omit the field entirely when no RPE was given, so an opted-out set looks
+  // the same as one logged before RPE existed. Not indexed, so no migration.
+  if (rpe !== undefined) set.rpe = rpe;
+  return await db.sets.add(set);
 }
 
 async function getSetsForWorkout(workoutSessionId) {
@@ -311,13 +315,6 @@ async function updateSet(setId, weight, reps) {
     reps,
     timestamp: new Date().toISOString()
   });
-}
-
-// RPE is written after the set is logged, so it is a separate update.
-// It is not an indexed field, so no schema version bump is needed; sets
-// logged before RPE existed simply have no `rpe` property.
-async function updateSetRpe(setId, rpe) {
-  return await db.sets.update(setId, { rpe });
 }
 
 async function getLastCompletedWorkout(programId, workoutNumber) {
