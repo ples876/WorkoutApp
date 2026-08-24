@@ -342,7 +342,9 @@ function renderProgramList() {
           <p class="program-info">${workoutCount} workout${workoutCount !== 1 ? 's' : ''}</p>
         </div>
         <div class="program-actions">
-          ${!program.isActive ? `<button class="btn-primary btn-small start-program-btn" data-program-id="${program.id}">Start</button>` : ''}
+          ${program.isActive
+            ? `<button class="btn-secondary btn-small start-program-btn" data-program-id="${program.id}">Restart</button>`
+            : `<button class="btn-primary btn-small start-program-btn" data-program-id="${program.id}">Start</button>`}
           <button class="btn-secondary btn-small view-program-btn" data-program-id="${program.id}">View</button>
           <button class="btn-secondary btn-small edit-program-btn" data-program-id="${program.id}">Edit</button>
           <button class="btn-secondary btn-small copy-program-btn" data-program-id="${program.id}">Copy</button>
@@ -538,7 +540,9 @@ function renderProgramDetail(programId) {
       </div>
 
       <div class="detail-actions">
-        ${!program.isActive ? `<button id="start-program-detail-btn" class="btn-primary" data-program-id="${program.id}">Start Program</button>` : ''}
+        ${program.isActive
+          ? `<button id="start-program-detail-btn" class="btn-secondary" data-program-id="${program.id}">Restart Program</button>`
+          : `<button id="start-program-detail-btn" class="btn-primary" data-program-id="${program.id}">Start Program</button>`}
         <button id="edit-program-detail-btn" class="btn-secondary" data-program-id="${program.id}">Edit</button>
         <button id="delete-program-detail-btn" class="btn-secondary" data-program-id="${program.id}">Delete</button>
       </div>
@@ -778,7 +782,7 @@ function setupProgramListeners() {
   document.querySelectorAll('.edit-program-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const programId = parseInt(btn.dataset.programId);
-      if (!await canEditProgram(programId)) return;
+      if (!await canChangeProgram(programId)) return;
       currentProgramId = programId;
       currentProgramView = 'edit';
       copySourceProgramId = null;
@@ -920,7 +924,7 @@ function setupProgramDetailListeners(programId) {
   const editBtn = document.getElementById('edit-program-detail-btn');
   if (editBtn) {
     editBtn.addEventListener('click', async () => {
-      if (!await canEditProgram(programId)) return;
+      if (!await canChangeProgram(programId)) return;
       currentProgramView = 'edit';
       renderPrograms();
     });
@@ -1725,16 +1729,17 @@ async function handleImportData(event) {
 
 // ===== PROGRAM ACTION HANDLERS =====
 
-// A live session is rendered from its program's template, so editing that
-// template mid-workout would change the session underneath the user. Block it
-// until the workout is finished or cancelled. Returns true if editing is safe.
-async function canEditProgram(programId) {
+// A live session is rendered from its program's template and points at one of
+// its workout numbers, so editing the template or resetting the progress
+// pointer mid-workout would change the session underneath the user. Block it
+// until the workout is finished or cancelled. Returns true if the change is safe.
+async function canChangeProgram(programId, action = 'edit the program') {
   const isActiveProgram = state.activeProgram && state.activeProgram.id === programId;
   if (!state.activeWorkout || !isActiveProgram) return true;
 
   await showConfirmModal({
     title: 'Workout in progress',
-    message: 'You have a workout in progress for this program. Finish or cancel it first, then you can edit the program.',
+    message: `You have a workout in progress for this program. Finish or cancel it first, then you can ${action}.`,
     confirmLabel: 'Got it',
     cancelLabel: null,
   });
@@ -1742,6 +1747,25 @@ async function canEditProgram(programId) {
 }
 
 async function handleStartProgram(programId) {
+  // Same button restarts the program that is already active
+  if (state.activeProgram && state.activeProgram.id === programId) {
+    if (!await canChangeProgram(programId, 'restart it')) return;
+
+    const ok = await showConfirmModal({
+      title: 'Restart program?',
+      message: 'This program will start again from its first workout at cycle 1. Your logged workouts and history are kept.',
+      confirmLabel: 'Restart',
+    });
+    if (!ok) return;
+
+    await restartProgram(programId);
+    await loadActiveProgram();
+    await loadPrograms();
+
+    alert('Program restarted at cycle 1.');
+    return;
+  }
+
   // Check if another program is active
   if (state.activeProgram && state.activeProgram.id !== programId) {
     const currentProgramName = state.activeProgram.name;

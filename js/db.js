@@ -181,6 +181,17 @@ async function setActiveProgram(programId) {
   });
 }
 
+// Start the program over from its first workout at cycle 1. Only the progress
+// pointer is reset - logged sessions and sets are history and stay untouched.
+async function restartProgram(programId) {
+  const program = await getProgramById(programId);
+  const numbers = getWorkoutNumbers(program);
+  return await db.programs.update(programId, {
+    currentWorkout: numbers.length > 0 ? numbers[0] : 1,
+    completedCycles: 0
+  });
+}
+
 // The workout numbers a program actually has, in order. Numbers are stable
 // slot identifiers (sessions reference them), so they can have gaps if a
 // middle workout was emptied out during an edit - never assume 1..N.
