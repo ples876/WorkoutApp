@@ -931,6 +931,25 @@ h3 {
   margin-top: 0.15rem;
 }
 
+/* Sparkline: colours are variables so the theme applies with no JS */
+.sparkline {
+  margin-left: auto;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.sparkline polyline {
+  fill: none;
+  stroke: var(--primary-color);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.sparkline-latest {
+  fill: var(--primary-color);
+}
+
 /* Custom Exercise Form */
 .custom-exercise-form {
   max-width: 100%;

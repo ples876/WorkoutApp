@@ -146,12 +146,21 @@ async function renderExerciseHistory(exerciseId) {
   }
   const allTimeBest = runningBest;
 
+  // Estimated 1RM trend, oldest to newest. Sessions with no e1RM at all
+  // (bodyweight-only work) would flatline at zero, so they are left out.
+  const e1rmTrend = renderSparkline(
+    sessions
+      .map(s => ({ x: new Date(s.session.date).getTime(), y: s.bestE1RM }))
+      .filter(p => p.y > 0)
+  );
+
   // Build history HTML
   let html = `
     <div class="exercise-history">
       <div class="history-header">
         <button id="back-from-history-btn" class="btn-back">← Back</button>
         <h2>${exercise.name}${allTimeBest > 0 ? ` <span class="pr-e1rm">${fmtE1RM(allTimeBest)}</span>` : ''}</h2>
+        ${e1rmTrend}
       </div>
   `;
 
