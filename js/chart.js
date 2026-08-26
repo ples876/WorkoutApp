@@ -84,12 +84,19 @@ function renderLineChart(points, { width = 320, height = 190, emptyMessage = 'No
   }).join('');
 
   // Only two date labels: one per session would be unreadable after a year.
+  // The year is shown whenever the range actually crosses one, not merely when
+  // it is long - a Nov-to-Feb range is short but still spans two years, and
+  // reading it without the year would be ambiguous. Over a long history the day
+  // is dropped instead, since month and year is all that fits.
   const first = sorted[0];
   const last = sorted[sorted.length - 1];
   const spanDays = (last.x - first.x) / 86400000;
+  const crossesYears = new Date(first.x).getFullYear() !== new Date(last.x).getFullYear();
   const dateOpts = spanDays > 300
     ? { month: 'short', year: '2-digit' }
-    : { month: 'short', day: 'numeric' };
+    : crossesYears
+      ? { month: 'short', day: 'numeric', year: '2-digit' }
+      : { month: 'short', day: 'numeric' };
   const fmtAxisDate = ms => new Date(ms).toLocaleDateString(undefined, dateOpts);
 
   const axisX = sorted.length > 1

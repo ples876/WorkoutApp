@@ -1412,7 +1412,7 @@ h3 {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.15rem;
+  gap: 0.35rem;
   /* Padding, not size, is what makes this a thumb-sized target */
   padding: var(--spacing-xs);
   background: none;
