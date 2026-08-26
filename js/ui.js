@@ -24,6 +24,11 @@ function setupTabNavigation() {
   });
 }
 
+// Sessions behind the currently rendered exercise history, handed to the
+// detail chart when the sparkline is tapped.
+let historyChartSessions = null;
+let historyChartExerciseName = '';
+
 // ===== PR CALCULATION =====
 
 function calcE1RM(weight, reps) {
@@ -154,13 +159,25 @@ async function renderExerciseHistory(exerciseId) {
       .filter(p => p.y > 0)
   );
 
+  // The sparkline is the doorway to the detail chart, so the whole block is
+  // one tap target. With only one session there is no trend to open.
+  historyChartSessions = sessions;
+  historyChartExerciseName = exercise.name;
+  const trendBlock = allTimeBest <= 0
+    ? ''
+    : e1rmTrend
+      ? `<button id="e1rm-trend-btn" class="e1rm-trend" aria-label="Show estimated 1RM trend">
+           <span class="pr-e1rm">${fmtE1RM(allTimeBest)}</span>${e1rmTrend}
+         </button>`
+      : `<span class="pr-e1rm e1rm-static">${fmtE1RM(allTimeBest)}</span>`;
+
   // Build history HTML
   let html = `
     <div class="exercise-history">
       <div class="history-header">
         <button id="back-from-history-btn" class="btn-back">← Back</button>
-        <h2>${exercise.name}${allTimeBest > 0 ? ` <span class="pr-e1rm">${fmtE1RM(allTimeBest)}</span>` : ''}</h2>
-        ${e1rmTrend}
+        <h2>${exercise.name}</h2>
+        ${trendBlock}
       </div>
   `;
 
@@ -1160,6 +1177,13 @@ function setupHistoryListeners() {
       exitExerciseHistory();
     });
   }
+
+  const trendBtn = document.getElementById('e1rm-trend-btn');
+  if (trendBtn) {
+    trendBtn.addEventListener('click', () => {
+      showE1RMChartModal(historyChartExerciseName, historyChartSessions);
+    });
+  }
 }
 
 function setupSettingsListeners() {
@@ -1467,6 +1491,119 @@ function showRpeModal({ exerciseName, weight, reps }) {
       finish(btn.dataset.rpe === 'skip' ? 'skip' : parseFloat(btn.dataset.rpe));
     });
   });
+}
+
+// Rep caps for the chart filter. Brzycki inflates badly above about a dozen
+// reps, so capping is how a high-rep accessory is made readable.
+const E1RM_REP_CAPS = [
+  { value: 0, label: 'All reps' },
+  { value: 12, label: '≤ 12' },
+  { value: 8, label: '≤ 8' },
+  { value: 5, label: '≤ 5' }
+];
+
+// One point per session: the best estimated 1RM among that session's sets,
+// ignoring any set above the rep cap. Sessions left with no qualifying set
+// drop out entirely rather than plotting a hole.
+function buildE1RMPoints(sessions, repCap) {
+  const points = [];
+
+  for (const s of sessions) {
+    const sets = repCap > 0 ? s.sets.filter(set => set.reps <= repCap) : s.sets;
+
+    let best = null;
+    for (const set of sets) {
+      const e1rm = calcE1RM(set.weight, set.reps);
+      if (e1rm > 0 && (!best || e1rm > best.e1rm)) best = { e1rm, set };
+    }
+    if (!best) continue;
+
+    points.push({
+      x: new Date(s.session.date).getTime(),
+      y: best.e1rm,
+      date: s.session.date,
+      detail: fmtSet(best.set.weight, best.set.reps, best.set.rpe)
+    });
+  }
+
+  points.sort((a, b) => a.x - b.x);
+
+  // Flag PRs against a running best, oldest to newest, as the history list does
+  let runningBest = 0;
+  for (const p of points) {
+    p.isPR = p.y > runningBest;
+    if (p.isPR) runningBest = p.y;
+  }
+
+  return points;
+}
+
+// Detail view for the sparkline: full chart, a rep-cap filter, and a readout
+// line that fills in when a point is tapped.
+function showE1RMChartModal(exerciseName, sessions) {
+  if (!sessions || sessions.length === 0) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal modal-chart" role="dialog" aria-modal="true" aria-labelledby="chart-title">
+      <div class="modal-header">
+        <h3 id="chart-title">${exerciseName}</h3>
+        <p class="modal-subtitle">Estimated 1RM over time</p>
+      </div>
+      <div class="modal-body">
+        <div id="chart-area"></div>
+        <p class="chart-readout" id="chart-readout"></p>
+        <div class="chart-filters" id="chart-filters">
+          ${E1RM_REP_CAPS.map(c => `<button class="chart-filter${c.value === 0 ? ' active' : ''}" data-cap="${c.value}">${c.label}</button>`).join('')}
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="chart-close-btn" class="btn-secondary">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const area = document.getElementById('chart-area');
+  const readout = document.getElementById('chart-readout');
+  let points = [];
+
+  function draw(repCap) {
+    points = buildE1RMPoints(sessions, repCap);
+    area.innerHTML = renderLineChart(points);
+    readout.textContent = points.length > 0 ? 'Tap a point for details' : '';
+  }
+
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+  document.getElementById('chart-close-btn').addEventListener('click', close);
+
+  // Delegation: the chart is replaced wholesale whenever the filter changes
+  document.getElementById('chart-filters').addEventListener('click', (e) => {
+    const btn = e.target.closest('.chart-filter');
+    if (!btn) return;
+    overlay.querySelectorAll('.chart-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    draw(parseInt(btn.dataset.cap));
+  });
+
+  area.addEventListener('click', (e) => {
+    const hit = e.target.closest('.chart-hit');
+    if (!hit) return;
+    const p = points[parseInt(hit.dataset.index)];
+    if (!p) return;
+    readout.textContent = `${new Date(p.date).toLocaleDateString()} · ${fmtE1RM(p.y)} · from ${p.detail}`;
+  });
+
+  draw(0);
 }
 
 // Build and show the finish-workout confirmation modal with a summary

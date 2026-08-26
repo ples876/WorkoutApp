@@ -933,9 +933,9 @@ h3 {
 
 /* Sparkline: colours are variables so the theme applies with no JS */
 .sparkline {
-  margin-left: auto;
   flex-shrink: 0;
   overflow: visible;
+  display: block;
 }
 
 .sparkline polyline {
@@ -1403,4 +1403,114 @@ h3 {
 .btn-link-rewind:hover {
   color: var(--primary-color);
   background-color: var(--surface);
+}
+
+/* Tappable trend block in the exercise history header */
+.e1rm-trend {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  /* Padding, not size, is what makes this a thumb-sized target */
+  padding: var(--spacing-xs);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.e1rm-trend:hover {
+  background-color: var(--surface);
+}
+
+.e1rm-trend .pr-e1rm {
+  margin-top: 0;
+}
+
+.e1rm-static {
+  margin-left: auto;
+}
+
+/* Chart modal */
+.modal-chart {
+  max-width: 520px;
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--primary-color);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-label {
+  fill: var(--text-secondary);
+  font-size: 9px;
+  font-family: inherit;
+}
+
+.chart-dot {
+  fill: var(--primary-color);
+}
+
+.chart-dot-pr {
+  fill: #22c55e;
+}
+
+.chart-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.chart-empty {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: var(--spacing-md) 0;
+  font-size: 0.9rem;
+}
+
+.chart-readout {
+  min-height: 1.4rem;
+  margin-top: var(--spacing-xs);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.chart-filters {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+}
+
+.chart-filter {
+  padding: 0.5rem 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.chart-filter.active {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
 }
